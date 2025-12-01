@@ -225,26 +225,32 @@ router.post('/:id/feedback', authenticate, async (req: Request, res: Response) =
 
 // Get approved designs that can be used as templates (public endpoint)
 router.get('/templates/approved', optionalAuth, async (_req: Request, res: Response) => {
-  const templates = await prisma.design.findMany({
-    where: {
-      reviewStatus: 'APPROVED',
-      canBeTemplate: true,
-    },
-    orderBy: [
-      { userRating: 'desc' },
-      { createdAt: 'desc' },
-    ],
-    select: {
-      id: true,
-      generatedImageUrl: true,
-      userRating: true,
-      style: { select: { id: true, name: true, category: true } },
-      user: { select: { name: true } },
-      createdAt: true,
-    },
-  });
+  try {
+    const templates = await prisma.design.findMany({
+      where: {
+        reviewStatus: 'APPROVED',
+        canBeTemplate: true,
+      },
+      orderBy: [
+        { userRating: 'desc' },
+        { createdAt: 'desc' },
+      ],
+      select: {
+        id: true,
+        generatedImageUrl: true,
+        userRating: true,
+        style: { select: { id: true, name: true, category: true } },
+        user: { select: { name: true } },
+        createdAt: true,
+      },
+    });
 
-  res.json(templates);
+    res.json(templates);
+  } catch (error) {
+    console.error('Error fetching approved templates:', error);
+    // Return empty array instead of error to prevent frontend crashes
+    res.json([]);
+  }
 });
 
 export default router;

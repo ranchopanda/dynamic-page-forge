@@ -45,13 +45,30 @@ export const analyzeHandImage = async (base64Image: string): Promise<HandAnalysi
 
     const text = response.text;
     if (!text) throw new Error("No analysis returned");
-    return JSON.parse(text) as HandAnalysis;
+    
+    // Try to parse JSON, handle potential truncation
+    try {
+      return JSON.parse(text) as HandAnalysis;
+    } catch (parseError) {
+      console.error("JSON parse error, attempting to fix:", parseError);
+      // Try to extract valid JSON from potentially truncated response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          return JSON.parse(jsonMatch[0]) as HandAnalysis;
+        } catch {
+          // Fall through to default
+        }
+      }
+      throw parseError;
+    }
   } catch (error: any) {
     console.error("Analysis failed", error);
     // Check if rate limited
     if (error?.message?.includes('429') || error?.message?.includes('quota')) {
       throw new Error("Rate limited. Please wait a moment and try again.");
     }
+    // Return fallback analysis instead of failing
     return {
       skinTone: "Warm/Neutral",
       handShape: "Classic",

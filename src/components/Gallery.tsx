@@ -45,15 +45,38 @@ const Gallery: React.FC<GalleryProps> = ({ onBack, onStartDesign, onBooking }) =
   const loadDesigns = async (pageNum: number) => {
     setIsLoading(true);
     try {
-      const { designs: newDesigns, pagination } = await api.getDesignGallery({
-        page: pageNum,
-        limit: 12,
-        style: selectedStyle || undefined,
-        sort: sortBy,
-      });
+      // Load both gallery designs and approved templates
+      const [galleryResult, templates] = await Promise.all([
+        api.getDesignGallery({
+          page: pageNum,
+          limit: 12,
+          style: selectedStyle || undefined,
+          sort: sortBy,
+        }),
+        pageNum === 1 ? api.getPublicTemplates() : Promise.resolve([])
+      ]);
       
+      const { designs: newDesigns, pagination } = galleryResult;
+      
+      // Merge approved templates with gallery designs (templates first on page 1)
       if (pageNum === 1) {
-        setDesigns(newDesigns);
+        // Convert templates to Design format and merge
+        const templateDesigns = templates.map((t: any) => ({
+          id: t.id,
+          generatedImageUrl: t.generatedImageUrl,
+          style: t.style,
+          user: t.user,
+          likes: 0,
+          createdAt: t.createdAt,
+          isApproved: true,
+          userRating: t.userRating
+        }));
+        
+        // Filter out duplicates (templates that are also in gallery)
+        const templateIds = new Set(templateDesigns.map((t: any) => t.id));
+        const filteredGallery = newDesigns.filter((d: any) => !templateIds.has(d.id));
+        
+        setDesigns([...templateDesigns, ...filteredGallery]);
       } else {
         setDesigns(prev => [...prev, ...newDesigns]);
       }
@@ -154,6 +177,19 @@ const Gallery: React.FC<GalleryProps> = ({ onBack, onStartDesign, onBooking }) =
                   alt={design.style?.name || 'Henna Design'}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
+                {/* Approved Badge */}
+                {(design as any).isApproved && (
+                  <div className="absolute top-2 right-2 p-1.5 bg-green-500 rounded-full shadow-md">
+                    <span className="material-symbols-outlined text-white text-sm">verified</span>
+                  </div>
+                )}
+                {/* Rating Badge */}
+                {(design as any).userRating && (
+                  <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-400/90 backdrop-blur-sm rounded-full flex items-center gap-1">
+                    <span className="material-symbols-outlined text-white text-xs">star</span>
+                    <span className="text-white text-xs font-bold">{(design as any).userRating}</span>
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-4 group-hover:translate-y-0 transition-transform">
                   <p className="text-white font-bold">{design.style?.name || 'Custom'}</p>
