@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String?
+  name          String
+  phone         String?
+  avatar        String?
+  role          String    @default("USER")
+  googleId      String?   @unique
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  designs       Design[]
+  bookings      Booking[]
+  reviews       Review[]
+  artistProfile ArtistProfile?
+}
+
+model ArtistProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio         String?
+  specialties String   @default("[]")
+  experience  Int      @default(0)
+  portfolio   String   @default("[]")
+  rating      Float    @default(0)
+  reviewCount Int      @default(0)
+  available   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bookings Booking[]
+}
+
+model HennaStyle {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  description     String
+  imageUrl        String
+  promptModifier  String
+  category        String
+  complexity      String   @default("Medium")
+  coverage        String   @default("Full")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  designs Design[]
+}
+
+
+model Design {
+  id                String      @id @default(uuid())
+  userId            String
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  styleId           String?
+  style             HennaStyle? @relation(fields: [styleId], references: [id])
+  handImageUrl      String
+  generatedImageUrl String
+  outfitContext     String?
+  handAnalysis      String?
+  isPublic          Boolean     @default(false)
+  likes             Int         @default(0)
+  
+  // Review system
+  reviewStatus      String      @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedAt        DateTime?
+  reviewedBy        String?
+  reviewNotes       String?
+  canBeTemplate     Boolean     @default(false) // If approved, can be used as template
+  
+  // User feedback
+  userRating        Int?        // 1-5 stars
+  userFeedback      String?     // User's comment about the design
+  feedbackAt        DateTime?
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  booking Booking?
+}
+
+model Booking {
+  id               String         @id @default(uuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artistId         String?
+  artist           ArtistProfile? @relation(fields: [artistId], references: [id])
+  designId         String?        @unique
+  design           Design?        @relation(fields: [designId], references: [id])
+  status           String         @default("PENDING")
+  consultationType String
+  scheduledDate    DateTime
+  scheduledTime    String
+  eventDate        DateTime?
+  message          String?
+  confirmationCode String         @unique
+  totalPrice       Float?
+  depositPaid      Boolean        @default(false)
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artistId  String
+  rating    Int
+  comment   String?
+  images    String   @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, artistId])
+}
+
+model Newsletter {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model BlogPost {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  excerpt     String
+  content     String
+  coverImage  String?
+  category    String   @default("General")
+  tags        String   @default("[]") // JSON array of tags
+  author      String   @default("Himanshi")
+  isPublished Boolean  @default(false)
+  isFeatured  Boolean  @default(false)
+  views       Int      @default(0)
+  metaTitle   String?
+  metaDescription String?
+  keywords    String?  // SEO keywords
+  scheduledAt DateTime? // Schedule publish date
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SiteSettings {
+  id              String   @id @default("settings")
+  siteName        String   @default("Mehndi Design")
+  tagline         String   @default("AI-Powered Custom Mehndi Design Generator")
+  ownerName       String   @default("Himanshi")
+  email           String   @default("himanshiparashar44@gmail.com")
+  phone           String   @default("+91 7011489500")
+  whatsapp        String   @default("+91 7011489500")
+  address         String   @default("Greater Noida, Uttar Pradesh")
+  pricePerHand    Int      @default(100)
+  availableDays   String   @default("Sunday, Monday")
+  instagram       String?
+  facebook        String?
+  pinterest       String?
+  twitter         String?
+  aboutText       String?
+  seoKeywords     String   @default("mehndi design, henna artist Greater Noida, bridal mehndi, AI mehndi generator")
+  googleAnalytics String?
+  updatedAt       DateTime @updatedAt
+}

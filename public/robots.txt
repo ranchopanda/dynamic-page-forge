@@ -1,0 +1,15 @@
+# Robots.txt for Mehndi Design
+# https://henna-harmony-him1.vercel.app
+
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://henna-harmony-him1.vercel.app/sitemap.xml
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1
+
+# Disallow admin and API routes
+Disallow: /api/
+Disallow: /admin/
