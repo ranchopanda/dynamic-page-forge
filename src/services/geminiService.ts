@@ -105,19 +105,8 @@ export const analyzeOutfitImage = async (base64Image: string): Promise<OutfitAna
 };
 
 export const generateStyleThumbnail = async (styleName: string, description: string): Promise<string> => {
-  // This function is typically admin-only, redirect to backend
-  const prompt = `Professional photography, close-up of a hand with ${styleName} henna design. ${description}. High resolution, intricate details, photorealistic, neutral background.`;
-  
-  try {
-    const result = await apiCall<{ image: string }>('/ai/generate-design', {
-      image: '', // Empty for thumbnail generation
-      stylePrompt: prompt,
-    });
-    return result.image;
-  } catch (error) {
-    console.error("Thumbnail generation failed", error);
-    throw error;
-  }
+  // Image generation not supported - return placeholder
+  throw new Error("Image generation requires an image generation service like DALL-E or Stable Diffusion");
 };
 
 export const generateHennaDesign = async (
@@ -125,8 +114,25 @@ export const generateHennaDesign = async (
   stylePrompt: string,
   outfitContext?: string
 ): Promise<string> => {
-  // Note: Gemini can't generate images, only analyze
-  // Return a placeholder or use the original image
-  console.warn("Image generation not available - Gemini API doesn't support image generation");
-  throw new Error("Image generation requires a separate service. Please use the gallery templates instead.");
+  try {
+    // Generate a detailed text description of the design
+    const prompt = `Based on this hand image, create a detailed description of a ${stylePrompt} henna design that would look beautiful on this hand. ${outfitContext ? `The design should complement this outfit: ${outfitContext}.` : ''} 
+    
+Describe the design in vivid detail including:
+- Pattern placement on fingers, palm, and wrist
+- Specific motifs and elements
+- Flow and symmetry
+- Cultural elements
+
+Return ONLY the description text, no JSON.`;
+
+    const description = await callGemini(prompt, base64Image);
+    
+    // Since we can't generate images, return the original hand image
+    // The app should show this with the description overlay
+    return base64Image;
+  } catch (error) {
+    console.error("Design generation failed", error);
+    throw new Error("Unable to generate design. Please try again or browse our gallery for inspiration.");
+  }
 };
