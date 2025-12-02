@@ -3,6 +3,7 @@ import { HandAnalysis, OutfitAnalysis } from "../types";
 // Use Gemini API directly from frontend
 const GEMINI_API_KEY = 'AIzaSyBmE26lEC7izfY_ERA1wBXpxBVKUFwF7pQ';
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const IMAGE_GEN_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent';
 
 // Helper to call Gemini API directly
 const callGemini = async (prompt: string, image?: string): Promise<string> => {
@@ -115,22 +116,61 @@ export const generateHennaDesign = async (
   outfitContext?: string
 ): Promise<string> => {
   try {
-    // Generate a detailed text description of the design
-    const prompt = `Based on this hand image, create a detailed description of a ${stylePrompt} henna design that would look beautiful on this hand. ${outfitContext ? `The design should complement this outfit: ${outfitContext}.` : ''} 
+    // Create detailed prompt for henna design generation
+    const prompt = `Generate a beautiful ${stylePrompt} henna/mehendi design on this hand. ${outfitContext ? `The design should complement: ${outfitContext}.` : ''} 
     
-Describe the design in vivid detail including:
-- Pattern placement on fingers, palm, and wrist
-- Specific motifs and elements
-- Flow and symmetry
-- Cultural elements
+The design should:
+- Follow traditional henna art patterns
+- Be intricate and detailed
+- Cover fingers, palm, and wrist appropriately
+- Look natural and elegant on the hand
+- Use traditional motifs like paisleys, flowers, mandalas, vines
+- Be photorealistic and high quality`;
 
-Return ONLY the description text, no JSON.`;
-
-    const description = await callGemini(prompt, base64Image);
+    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
     
-    // Since we can't generate images, return the original hand image
-    // The app should show this with the description overlay
-    return base64Image;
+    const response = await fetch(`${IMAGE_GEN_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            {
+              inline_data: {
+                mime_type: 'image/jpeg',
+                data: base64Data
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 4096,
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Image generation error:', error);
+      throw new Error(`Image generation failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Extract generated image from response
+    if (data.candidates && data.candidates[0]?.content?.parts) {
+      for (const part of data.candidates[0].content.parts) {
+        if (part.inline_data) {
+          return `data:${part.inline_data.mime_type};base64,${part.inline_data.data}`;
+        }
+      }
+    }
+    
+    throw new Error('No image generated in response');
   } catch (error) {
     console.error("Design generation failed", error);
     throw new Error("Unable to generate design. Please try again or browse our gallery for inspiration.");
