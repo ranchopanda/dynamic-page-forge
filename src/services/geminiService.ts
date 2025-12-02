@@ -1,146 +1,75 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { HandAnalysis, OutfitAnalysis } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || process.env.API_KEY });
+// API base URL from environment
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-// Use gemini-2.0-flash for text/analysis (higher free tier limits)
-const TEXT_MODEL = "gemini-2.0-flash";
-// Use image model for generation (lower limits)
-const IMAGE_MODEL = "gemini-2.0-flash-exp-image-generation";
+// Helper to make authenticated API calls
+const apiCall = async <T>(endpoint: string, body: object): Promise<T> => {
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include', // Include cookies for auth
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `API error: ${response.status}`);
+  }
+
+  return response.json();
+};
 
 export const analyzeHandImage = async (base64Image: string): Promise<HandAnalysis> => {
-  try {
-    const response = await ai.models.generateContent({
-      model: TEXT_MODEL,
-      contents: {
-        parts: [
-          { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-          { text: `Analyze this image of a hand for henna (mehndi) design placement. 
-            Provide a JSON response with:
-            - skinTone: The skin tone description.
-            - handShape: The general shape (e.g., Slender, Broad, Square).
-            - coverage: Recommendation for design coverage.
-            - keyFeature: A unique anatomical feature.
-            - fingerShape: Description of fingers.
-            - wristArea: Suitability for wrist designs.
-            - recommendedStyles: Array of 2-3 traditional henna styles.` },
-        ],
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            skinTone: { type: Type.STRING },
-            handShape: { type: Type.STRING },
-            coverage: { type: Type.STRING },
-            keyFeature: { type: Type.STRING },
-            fingerShape: { type: Type.STRING },
-            wristArea: { type: Type.STRING },
-            recommendedStyles: { type: Type.ARRAY, items: { type: Type.STRING } },
-          },
-        },
-      },
-    });
+  const fallbackAnalysis: HandAnalysis = {
+    skinTone: "Warm/Neutral",
+    handShape: "Classic",
+    coverage: "Optimal for full coverage",
+    keyFeature: "Unique finger length",
+    fingerShape: "Highlights elegant structure",
+    wristArea: "Ideal for intricate wrist work",
+    recommendedStyles: ["Arabic", "Minimalist"],
+  };
 
-    const text = response.text;
-    if (!text) throw new Error("No analysis returned");
-    
-    // Try to parse JSON, handle potential truncation
-    try {
-      return JSON.parse(text) as HandAnalysis;
-    } catch (parseError) {
-      console.error("JSON parse error, attempting to fix:", parseError);
-      // Try to extract valid JSON from potentially truncated response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          return JSON.parse(jsonMatch[0]) as HandAnalysis;
-        } catch {
-          // Fall through to default
-        }
-      }
-      throw parseError;
-    }
+  try {
+    return await apiCall<HandAnalysis>('/ai/analyze-hand', { image: base64Image });
   } catch (error: any) {
     console.error("Analysis failed", error);
-    // Check if rate limited
-    if (error?.message?.includes('429') || error?.message?.includes('quota')) {
+    if (error?.message?.includes('429') || error?.message?.includes('Rate limited')) {
       throw new Error("Rate limited. Please wait a moment and try again.");
     }
-    // Return fallback analysis instead of failing
-    return {
-      skinTone: "Warm/Neutral",
-      handShape: "Classic",
-      coverage: "Optimal for full coverage",
-      keyFeature: "Unique finger length",
-      fingerShape: "Highlights elegant structure",
-      wristArea: "Ideal for intricate wrist work",
-      recommendedStyles: ["Arabic", "Minimalist"],
-    };
+    return fallbackAnalysis;
   }
 };
 
 
 export const analyzeOutfitImage = async (base64Image: string): Promise<OutfitAnalysis> => {
-  try {
-    const response = await ai.models.generateContent({
-      model: TEXT_MODEL,
-      contents: {
-        parts: [
-          { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-          { text: `Analyze this outfit image for fashion style and colors.
-            Provide a JSON response with:
-            - outfitType: One of "Traditional Lehenga", "Modern Gown", "Saree", or "Fusion/Other".
-            - dominantColors: An array of 2-3 dominant hex color codes.
-            - styleKeywords: An array of 2-3 descriptive style keywords.` },
-        ],
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            outfitType: { type: Type.STRING },
-            dominantColors: { type: Type.ARRAY, items: { type: Type.STRING } },
-            styleKeywords: { type: Type.ARRAY, items: { type: Type.STRING } },
-          },
-        },
-      },
-    });
+  const fallbackAnalysis: OutfitAnalysis = {
+    outfitType: "Traditional Lehenga",
+    dominantColors: ["#8F3E27", "#D8A85B"],
+    styleKeywords: ["Embroidered", "Traditional"]
+  };
 
-    const text = response.text;
-    if (!text) throw new Error("No analysis returned");
-    return JSON.parse(text) as OutfitAnalysis;
+  try {
+    return await apiCall<OutfitAnalysis>('/ai/analyze-outfit', { image: base64Image });
   } catch (error) {
     console.error("Outfit analysis failed", error);
-    return {
-      outfitType: "Traditional Lehenga",
-      dominantColors: ["#8F3E27", "#D8A85B"],
-      styleKeywords: ["Embroidered", "Traditional"]
-    };
+    return fallbackAnalysis;
   }
 };
 
 export const generateStyleThumbnail = async (styleName: string, description: string): Promise<string> => {
+  // This function is typically admin-only, redirect to backend
+  const prompt = `Professional photography, close-up of a hand with ${styleName} henna design. ${description}. High resolution, intricate details, photorealistic, neutral background.`;
+  
   try {
-    const prompt = `Professional photography, close-up of a hand with ${styleName} henna design. ${description}. High resolution, intricate details, photorealistic, neutral background.`;
-
-    const response = await ai.models.generateContent({
-      model: IMAGE_MODEL,
-      contents: { parts: [{ text: prompt }] },
-      config: {
-        responseModalities: ["image", "text"],
-      },
+    const result = await apiCall<{ image: string }>('/ai/generate-design', {
+      image: '', // Empty for thumbnail generation
+      stylePrompt: prompt,
     });
-
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
-    }
-    
-    throw new Error("No image generated");
+    return result.image;
   } catch (error) {
     console.error("Thumbnail generation failed", error);
     throw error;
@@ -153,32 +82,12 @@ export const generateHennaDesign = async (
   outfitContext?: string
 ): Promise<string> => {
   try {
-    let finalPrompt = `Generate a high-quality, photorealistic image of this exact hand with a beautiful ${stylePrompt} henna (mehndi) design applied to it. Keep the background and hand position exactly the same if possible. Focus on intricate details and rich stain color.`;
-    
-    if (outfitContext) {
-      finalPrompt += ` The design should complement an outfit described as: ${outfitContext}.`;
-    }
-
-    const response = await ai.models.generateContent({
-      model: IMAGE_MODEL,
-      contents: {
-        parts: [
-          { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-          { text: finalPrompt },
-        ],
-      },
-      config: {
-        responseModalities: ["image", "text"],
-      },
+    const result = await apiCall<{ image: string }>('/ai/generate-design', {
+      image: base64Image,
+      stylePrompt,
+      outfitContext,
     });
-
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
-    }
-    
-    throw new Error("No image generated");
+    return result.image;
   } catch (error) {
     console.error("Generation failed", error);
     throw error;

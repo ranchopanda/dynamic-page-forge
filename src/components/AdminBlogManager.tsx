@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../lib/api';
+import { supabaseApi } from '../lib/supabaseApi';
 
 interface BlogPost {
   id: string;
@@ -32,7 +32,7 @@ const AdminBlogManager: React.FC = () => {
     excerpt: '',
     content: '',
     coverImage: '',
-    category: 'Bridal Mehndi',
+    category: 'Bridal Mehendi',
     tags: '',
     isPublished: false,
     isFeatured: false,
@@ -43,12 +43,12 @@ const AdminBlogManager: React.FC = () => {
   });
 
   const categories = [
-    'Bridal Mehndi',
+    'Bridal Mehendi',
     'Arabic Designs',
-    'Festive Mehndi',
+    'Festive Mehendi',
     'Modern Minimalist',
     'Tips & Tutorials',
-    'Mehndi Care',
+    'Mehendi Care',
     'Design Inspiration',
   ];
 
@@ -59,7 +59,7 @@ const AdminBlogManager: React.FC = () => {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/blog/admin/all');
+      const response = await supabaseApi.getAdminBlogPosts();
       setPosts(response.data || []);
     } catch (error) {
       console.error('Error fetching posts:', error);
@@ -73,15 +73,22 @@ const AdminBlogManager: React.FC = () => {
     try {
       const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(Boolean);
       const payload = {
-        ...formData,
+        title: formData.title,
+        slug: formData.slug,
+        excerpt: formData.excerpt,
+        content: formData.content,
+        category: formData.category,
         tags: tagsArray,
+        coverImage: formData.coverImage,
+        isPublished: formData.isPublished,
+        isFeatured: formData.isFeatured,
         scheduledAt: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
       };
 
       if (editingPost) {
-        await api.put(`/blog/admin/${editingPost.id}`, payload);
+        await supabaseApi.updateBlogPost(editingPost.id, payload);
       } else {
-        await api.post('/blog/admin', payload);
+        await supabaseApi.createBlogPost(payload);
       }
 
       setShowEditor(false);
@@ -117,59 +124,59 @@ const AdminBlogManager: React.FC = () => {
   // Blog post templates for quick creation
   const blogTemplates = [
     {
-      name: 'Bridal Mehndi Post',
-      title: 'Beautiful Bridal Mehndi Designs for [Occasion]',
-      excerpt: 'Discover stunning bridal mehndi designs perfect for your special day. From traditional to modern styles.',
-      category: 'Bridal Mehndi',
+      name: 'Bridal Mehendi Post',
+      title: 'Beautiful Bridal Mehendi Designs for [Occasion]',
+      excerpt: 'Discover stunning bridal mehendi designs perfect for your special day. From traditional to modern styles.',
+      category: 'Bridal Mehendi',
       tags: 'bridal, wedding, dulhan, traditional',
-      keywords: 'bridal mehndi Greater Noida, wedding henna, dulhan mehndi design',
+      keywords: 'bridal mehendi Greater Noida, wedding henna, dulhan mehendi design',
       content: `<h2>Introduction</h2>
-<p>Your wedding day deserves the most beautiful <strong>bridal mehndi</strong>. Here are our top picks for [year].</p>
+<p>Your wedding day deserves the most beautiful <strong>bridal mehendi</strong>. Here are our top picks for [year].</p>
 
-<h2>Top Bridal Mehndi Designs</h2>
+<h2>Top Bridal Mehendi Designs</h2>
 <h3>1. [Design Name]</h3>
 <p>Description of the design and why it's perfect for brides.</p>
 
 <h3>2. [Design Name]</h3>
 <p>Description of the design.</p>
 
-<h2>Tips for Bridal Mehndi</h2>
+<h2>Tips for Bridal Mehendi</h2>
 <ul>
-<li>Apply mehndi 2-3 days before the wedding</li>
+<li>Apply mehendi 2-3 days before the wedding</li>
 <li>Keep it on for 6-8 hours for dark color</li>
 <li>Avoid water for 24 hours</li>
 </ul>
 
-<h2>Book Your Bridal Mehndi</h2>
-<p>Looking for a professional <strong>mehndi artist in Greater Noida</strong>? Contact us at +91 7011489500.</p>`
+<h2>Book Your Bridal Mehendi</h2>
+<p>Looking for a professional <strong>mehendi artist in Greater Noida</strong>? Contact us at +91 7011489500.</p>`
     },
     {
-      name: 'Festival Mehndi Post',
-      title: '[Festival Name] Mehndi Designs: Beautiful Patterns for Celebration',
-      excerpt: 'Celebrate [festival] with beautiful mehndi designs. Traditional and modern patterns for the festive season.',
-      category: 'Festive Mehndi',
+      name: 'Festival Mehendi Post',
+      title: '[Festival Name] Mehendi Designs: Beautiful Patterns for Celebration',
+      excerpt: 'Celebrate [festival] with beautiful mehendi designs. Traditional and modern patterns for the festive season.',
+      category: 'Festive Mehendi',
       tags: 'festival, celebration, traditional, festive',
-      keywords: 'festival mehndi, [festival] henna design, festive mehndi Greater Noida',
-      content: `<h2>Celebrate [Festival] with Mehndi</h2>
-<p><strong>[Festival]</strong> is a time for joy and celebration. Beautiful mehndi adds to the festive spirit.</p>
+      keywords: 'festival mehendi, [festival] henna design, festive mehendi Greater Noida',
+      content: `<h2>Celebrate [Festival] with Mehendi</h2>
+<p><strong>[Festival]</strong> is a time for joy and celebration. Beautiful mehendi adds to the festive spirit.</p>
 
-<h2>Popular [Festival] Mehndi Designs</h2>
+<h2>Popular [Festival] Mehendi Designs</h2>
 <h3>1. Traditional Design</h3>
 <p>Classic patterns that never go out of style.</p>
 
 <h3>2. Modern Fusion</h3>
 <p>Contemporary designs with traditional elements.</p>
 
-<h2>Book Festival Mehndi</h2>
-<p>Make your [festival] special! Book mehndi at +91 7011489500. Available in Greater Noida.</p>`
+<h2>Book Festival Mehendi</h2>
+<p>Make your [festival] special! Book mehendi at +91 7011489500. Available in Greater Noida.</p>`
     },
     {
       name: 'Design Tutorial Post',
-      title: 'How to [Topic]: Step-by-Step Mehndi Guide',
+      title: 'How to [Topic]: Step-by-Step Mehendi Guide',
       excerpt: 'Learn [topic] with our easy step-by-step guide. Perfect for beginners and professionals.',
       category: 'Tips & Tutorials',
       tags: 'tutorial, guide, tips, how-to, learning',
-      keywords: 'mehndi tutorial, henna guide, learn mehndi, mehndi tips',
+      keywords: 'mehendi tutorial, henna guide, learn mehendi, mehendi tips',
       content: `<h2>Introduction to [Topic]</h2>
 <p>In this guide, you'll learn <strong>[topic]</strong> with easy-to-follow steps.</p>
 
@@ -194,7 +201,7 @@ const AdminBlogManager: React.FC = () => {
 </ul>
 
 <h2>Need Professional Help?</h2>
-<p>Book a professional mehndi artist at +91 7011489500.</p>`
+<p>Book a professional mehendi artist at +91 7011489500.</p>`
     }
   ];
 
@@ -214,7 +221,7 @@ const AdminBlogManager: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this post?')) return;
     try {
-      await api.delete(`/blog/admin/${id}`);
+      await supabaseApi.deleteBlogPost(id);
       fetchPosts();
     } catch (error) {
       console.error('Error deleting post:', error);
@@ -223,9 +230,7 @@ const AdminBlogManager: React.FC = () => {
 
   const togglePublish = async (post: BlogPost) => {
     try {
-      await api.put(`/blog/admin/${post.id}`, {
-        ...post,
-        tags: JSON.parse(post.tags || '[]'),
+      await supabaseApi.updateBlogPost(post.id, {
         isPublished: !post.isPublished,
       });
       fetchPosts();
@@ -240,7 +245,7 @@ const AdminBlogManager: React.FC = () => {
       excerpt: '',
       content: '',
       coverImage: '',
-      category: 'Bridal Mehndi',
+      category: 'Bridal Mehendi',
       tags: '',
       isPublished: false,
       isFeatured: false,
@@ -273,7 +278,7 @@ const AdminBlogManager: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl border border-primary/20 focus:border-primary focus:ring-2 focus:ring-primary/20"
                 required
-                placeholder="e.g., Top 10 Bridal Mehndi Designs for 2025"
+                placeholder="e.g., Top 10 Bridal Mehendi Designs for 2025"
               />
             </div>
 
@@ -346,7 +351,7 @@ const AdminBlogManager: React.FC = () => {
                 value={formData.keywords}
                 onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl border border-primary/20 focus:border-primary"
-                placeholder="bridal mehndi Greater Noida, wedding henna"
+                placeholder="bridal mehendi Greater Noida, wedding henna"
               />
             </div>
 
@@ -439,7 +444,7 @@ const AdminBlogManager: React.FC = () => {
       </div>
 
       <p className="text-text-primary-light/60">
-        Create SEO-optimized blog posts to rank higher on Google. Focus on keywords like "mehndi design Greater Noida", "bridal henna", etc.
+        Create SEO-optimized blog posts to rank higher on Google. Focus on keywords like "mehendi design Greater Noida", "bridal henna", etc.
       </p>
 
       {loading ? (
@@ -523,7 +528,7 @@ const AdminBlogManager: React.FC = () => {
       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 mt-8">
         <h4 className="font-bold text-blue-800 dark:text-blue-300 mb-3">💡 SEO Tips for Blog Posts</h4>
         <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-2">
-          <li>• Use keywords like "mehndi design Greater Noida", "bridal henna Noida", "wedding mehndi artist"</li>
+          <li>• Use keywords like "mehendi design Greater Noida", "bridal henna Noida", "wedding mehendi artist"</li>
           <li>• Write at least 500+ words per post for better ranking</li>
           <li>• Include location-specific content (Greater Noida, Noida, Delhi NCR)</li>
           <li>• Add images with descriptive alt text</li>

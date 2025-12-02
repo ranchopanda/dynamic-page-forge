@@ -1,6 +1,6 @@
-# Henna Harmony Studio
+# Mehendi
 
-AI-powered bespoke henna design studio. Upload your hand, analyze your style, and visualize exquisite mehndi designs.
+AI-powered bespoke henna design studio. Upload your hand, analyze your style, and visualize exquisite mehendi designs.
 
 ## Features
 
@@ -54,7 +54,7 @@ GEMINI_API_KEY=your-gemini-api-key
 
 **Backend (server/.env):**
 ```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/henna_harmony"
+DATABASE_URL="postgresql://postgres:password@localhost:5432/mehendi"
 JWT_SECRET="your-super-secret-jwt-key"
 FRONTEND_URL=http://localhost:3000
 PORT=3001
@@ -128,8 +128,8 @@ npm run server:dev   # Backend on :3001
 
 ## Default Accounts (after seeding)
 
-- **Admin:** admin@hennaharmony.com / admin123
-- **Artist:** priya@hennaharmony.com / artist123
+- **Admin:** admin@mehendi.com / admin123
+- **Artist:** priya@mehendi.com / artist123
 
 ## License
 

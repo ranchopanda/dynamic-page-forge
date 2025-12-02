@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/SupabaseAuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -29,19 +29,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
 
     try {
       if (mode === 'login') {
+        console.log('Attempting login...');
         await login(formData.email, formData.password);
+        console.log('Login successful, closing modal...');
       } else {
+        console.log('Attempting registration...');
         await register({
           email: formData.email,
           password: formData.password,
           name: formData.name,
           phone: formData.phone || undefined,
         });
+        console.log('Registration successful, closing modal...');
       }
+      setIsLoading(false);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
-    } finally {
+      console.error('Auth error:', err);
+      setError(err.message || 'Something went wrong. Please try again.');
       setIsLoading(false);
     }
   };
@@ -65,17 +70,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
         <div className="p-8">
           <div className="text-center mb-8">
             <h2 className="font-headline text-3xl font-bold text-primary">
-              {mode === 'login' ? 'Welcome Back' : 'Join Henna Harmony'}
+              {mode === 'login' ? 'Welcome Back' : 'Join Mehendi'}
             </h2>
             <p className="mt-2 text-text-primary-light/70 dark:text-text-primary-dark/70">
               {mode === 'login' 
-                ? 'Sign in to access your designs' 
-                : 'Create an account to save your designs'}
+                ? 'Admin access only - Regular users can use all features without login' 
+                : 'Create an admin account'}
             </p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            <div 
+              className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm"
+              role="alert"
+              aria-live="assertive"
+            >
               {error}
             </div>
           )}
@@ -83,13 +92,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-medium mb-1">Full Name</label>
+                <label htmlFor="auth-name" className="block text-sm font-medium mb-1">Full Name</label>
                 <input
+                  id="auth-name"
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   required
+                  autoComplete="name"
                   className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                   placeholder="Priya Sharma"
                 />
@@ -97,27 +108,31 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label htmlFor="auth-email" className="block text-sm font-medium mb-1">Email</label>
               <input
+                id="auth-email"
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 required
+                autoComplete="email"
                 className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                 placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
+              <label htmlFor="auth-password" className="block text-sm font-medium mb-1">Password</label>
               <input
+                id="auth-password"
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 required
                 minLength={8}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                 placeholder="••••••••"
               />
@@ -125,14 +140,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
 
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-medium mb-1">Phone (Optional)</label>
+                <label htmlFor="auth-phone" className="block text-sm font-medium mb-1">Phone (Optional)</label>
                 <input
+                  id="auth-phone"
                   type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  autoComplete="tel"
                   className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="+91 7011489500"
                 />
               </div>
             )}
@@ -148,9 +165,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
                   Processing...
                 </>
               ) : mode === 'login' ? (
-                'Sign In'
+                'Admin Sign In'
               ) : (
-                'Create Account'
+                'Create Admin Account'
               )}
             </button>
           </form>

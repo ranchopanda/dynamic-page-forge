@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GeneratorStep, HennaStyle, HandAnalysis } from '../types';
-import { useAuth } from '../context/AuthContext';
-import api from '../lib/api';
+import { GeneratorStep, HandAnalysis } from '../types';
+import { useAuth } from '../context/SupabaseAuthContext';
+import { supabaseApi } from '../lib/supabaseApi';
+import { safeStorage } from '../lib/storage';
 import { analyzeHandImage, generateHennaDesign, analyzeOutfitImage, generateStyleThumbnail } from '../services/geminiService';
+import SEOHead, { SEO_CONFIGS } from './SEOHead';
 
 interface DesignFlowProps {
   onBack: () => void;
@@ -12,11 +14,24 @@ interface DesignFlowProps {
   onArtists?: () => void;
 }
 
+// Local HennaStyle interface with camelCase for component use
+interface HennaStyle {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  promptModifier: string;
+  category?: string;
+  complexity?: string;
+  coverage?: string;
+}
+
+// Approved template interface matching API response
 interface ApprovedTemplate {
   id: string;
   generatedImageUrl: string;
   userRating: number;
-  style: { id: string; name: string; category: string } | null;
+  style: { id: string; name: string; category?: string } | null;
   user: { name: string } | null;
   createdAt: string;
 }
@@ -25,7 +40,7 @@ const DEFAULT_PALETTE = ['#f3e0d5', '#8f3e27', '#ffecb3', '#f8f6f6', '#d32f2f', 
 const STYLE_KEYWORDS = ['Embroidered', 'Minimalist', 'Floral', 'Heavy', 'Geometric', 'Traditional', 'Modern', 'Bridal'];
 
 const DesignFlow: React.FC<DesignFlowProps> = ({ onBack, onViewSaved, onBookConsultation, onGallery, onArtists }) => {
-  useAuth(); // Keep context available for future use
+  const { user, isAuthenticated } = useAuth();
   const [step, setStep] = useState<GeneratorStep>(GeneratorStep.UPLOAD);
   
   // Hand Upload State
@@ -76,8 +91,9 @@ const DesignFlow: React.FC<DesignFlowProps> = ({ onBack, onViewSaved, onBookCons
 
   const loadStyles = async () => {
     try {
-      const data = await api.getStyles();
-      setStyles(data);
+      const data = await supabaseApi.getStyles();
+      // API now returns pre-transformed camelCase data
+      setStyles(data as HennaStyle[]);
     } catch {
       setStyles(FALLBACK_STYLES);
     }
@@ -85,7 +101,8 @@ const DesignFlow: React.FC<DesignFlowProps> = ({ onBack, onViewSaved, onBookCons
 
   const loadApprovedTemplates = async () => {
     try {
-      const templates = await api.getPublicTemplates();
+      const templates = await supabaseApi.getPublicTemplates();
+      // API now returns pre-transformed ApprovedTemplate format
       setApprovedTemplates(Array.isArray(templates) ? templates : []);
     } catch (error) {
       // Silently fail - templates are optional enhancement
@@ -94,10 +111,10 @@ const DesignFlow: React.FC<DesignFlowProps> = ({ onBack, onViewSaved, onBookCons
   };
 
 const FALLBACK_STYLES: HennaStyle[] = [
-  { id: 'regal-bloom', name: 'Regal Bloom', description: 'Intricate floral and paisley mehndi design suitable for grand occasions.', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCxAJLz5irj-Bjns_y5dVhmq1L-mydTwGUOkSg2ySegnF3bo-fzHfk7YV9qd2s9U-97xeos90F9JxS4D3SP-gKIpxgQfc5VMYWv5QqcAdPLanxAglR6zTW-o-k5Av2OwWqLQbb-xP2bj-JuOWjFiiTCx6KmyDTt530DPEIzX7QNpPl1JhGjGKBSNCtX6CaUq2O8a7-zBhhUIDQa81T3cZUjATp4T5XCkGYhiDF9pfi6b4s6sesCRmtsyjYQsUtL9j0hmdldsP506w', promptModifier: 'regal bloom style, intricate floral and paisley mehndi design, highly detailed, traditional, heavy coverage', category: 'Traditional', complexity: 'High', coverage: 'Full' },
-  { id: 'modern-vine', name: 'Modern Vine', description: 'A contemporary vine-like pattern trailing elegantly up the hand.', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCuWPAch47zv4IVC5CsrXCORQ1o3VujEzTFKZU6ZI_ga_ExLDvxN1NTWYK0NMA2Leq10lSa2dEAJrlb2m7GkjCXMHQFMZNAvmu_7Rdwx-ZHeA_1Ulsj7aP2dnHssGvQ11Q-jskHUIJoCV2nVaxnXZVeCOQUuPVh34cQyVCOo7Ujv-tUPyQIYeg79pnd3XetnOEyimc9Ymh90gi2ngR_ObW6oT_fZNRSKiiqHZazrWYKeEbLUgEs1YJQ03aCnXHkNzhJqhE9pZux6Q', promptModifier: 'modern vine style, trailing vine-like mehndi pattern, elegant curves, leaves, contemporary, flowing', category: 'Modern', complexity: 'Medium', coverage: 'Partial' },
+  { id: 'regal-bloom', name: 'Regal Bloom', description: 'Intricate floral and paisley mehendi design suitable for grand occasions.', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCxAJLz5irj-Bjns_y5dVhmq1L-mydTwGUOkSg2ySegnF3bo-fzHfk7YV9qd2s9U-97xeos90F9JxS4D3SP-gKIpxgQfc5VMYWv5QqcAdPLanxAglR6zTW-o-k5Av2OwWqLQbb-xP2bj-JuOWjFiiTCx6KmyDTt530DPEIzX7QNpPl1JhGjGKBSNCtX6CaUq2O8a7-zBhhUIDQa81T3cZUjATp4T5XCkGYhiDF9pfi6b4s6sesCRmtsyjYQsUtL9j0hmdldsP506w', promptModifier: 'regal bloom style, intricate floral and paisley mehendi design, highly detailed, traditional, heavy coverage', category: 'Traditional', complexity: 'High', coverage: 'Full' },
+  { id: 'modern-vine', name: 'Modern Vine', description: 'A contemporary vine-like pattern trailing elegantly up the hand.', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCuWPAch47zv4IVC5CsrXCORQ1o3VujEzTFKZU6ZI_ga_ExLDvxN1NTWYK0NMA2Leq10lSa2dEAJrlb2m7GkjCXMHQFMZNAvmu_7Rdwx-ZHeA_1Ulsj7aP2dnHssGvQ11Q-jskHUIJoCV2nVaxnXZVeCOQUuPVh34cQyVCOo7Ujv-tUPyQIYeg79pnd3XetnOEyimc9Ymh90gi2ngR_ObW6oT_fZNRSKiiqHZazrWYKeEbLUgEs1YJQ03aCnXHkNzhJqhE9pZux6Q', promptModifier: 'modern vine style, trailing vine-like mehendi pattern, elegant curves, leaves, contemporary, flowing', category: 'Modern', complexity: 'Medium', coverage: 'Partial' },
   { id: 'royal-mandala', name: 'Royal Mandala', description: 'A grand, symmetrical mandala centerpiece for a majestic look.', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCkxyS7fIYgO3GbES7nKGKMNIA5ErhQoqLRooM1OpSUbL-hdZ-Q-W1x02saTGQrMkWNRJRQdQU-UK5l2tVR51m7_9X9S-bRYvKtZVxwHvl7v3Tt859ktY-iAiabCrakKUbPDN0R4uXdHyxON91-zmicTVfBc9n9Z6PiGNYIqGd-PZ80JLmjqWR6Bm75t6iUP3y5hMuBeJN6pz0SsVI_NWcLugoNhUfNhy8vFaEwYKqeqTyB1_o9B6IqhZdHcUNHKnNn71CJLuxC_A', promptModifier: 'royal mandala style, grand mandala design, center hand, symmetrical, circular patterns, detailed petals', category: 'Traditional', complexity: 'High', coverage: 'Full' },
-  { id: 'delicate-flora', name: 'Delicate Flora', description: 'Minimalist floral touches focusing on fingers and wrist.', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBMiq0nDG6lC6dGMBBMmxWXXeKROdSEhTNK45foL4Y-8whY6v1qwdbmLOHzVaAtNFqEzmI_jFPdAGRZBmBr7W7oonpED8FyQeTnMMWi9jraFgxArcf4Jzc8Fb2c4F-V_aaMl8a-O5i7x-EVVVNnDKWh4oF-nN2gi7x4EBK1bgZmoKhHzOY-p73dyDvqdlrlEunoMb3f8NtPdUbMjOFqMXLTKBLLqer02HGOLrH_a0f45tsvoiLT4jMHcETMHDZxLkWnQC77kp1YNw', promptModifier: 'delicate flora style, minimalist floral mehndi design, fingers and wrist focus, simple, elegant, light coverage', category: 'Minimalist', complexity: 'Low', coverage: 'Minimal' },
+  { id: 'delicate-flora', name: 'Delicate Flora', description: 'Minimalist floral touches focusing on fingers and wrist.', imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBMiq0nDG6lC6dGMBBMmxWXXeKROdSEhTNK45foL4Y-8whY6v1qwdbmLOHzVaAtNFqEzmI_jFPdAGRZBmBr7W7oonpED8FyQeTnMMWi9jraFgxArcf4Jzc8Fb2c4F-V_aaMl8a-O5i7x-EVVVNnDKWh4oF-nN2gi7x4EBK1bgZmoKhHzOY-p73dyDvqdlrlEunoMb3f8NtPdUbMjOFqMXLTKBLLqer02HGOLrH_a0f45tsvoiLT4jMHcETMHDZxLkWnQC77kp1YNw', promptModifier: 'delicate flora style, minimalist floral mehendi design, fingers and wrist focus, simple, elegant, light coverage', category: 'Minimalist', complexity: 'Low', coverage: 'Minimal' },
 ];
 
   const openCamera = async () => {
@@ -227,12 +244,38 @@ const FALLBACK_STYLES: HennaStyle[] = [
   const saveDesign = async () => {
     if (!generatedImage || !selectedStyle) return;
     try {
-      const newDesign = { id: Date.now().toString(), imageUrl: generatedImage, styleName: selectedStyle.name, date: new Date().toLocaleDateString(), analysis: analysis || undefined, outfitContext: outfitType ? `${outfitType} - ${outfitColors.join(', ')} - ${outfitTags.join(', ')}` : 'Custom' };
-      const savedDesigns = JSON.parse(localStorage.getItem('henna_saved_designs') || '[]');
-      savedDesigns.push(newDesign);
-      localStorage.setItem('henna_saved_designs', JSON.stringify(savedDesigns));
-      setIsSaved(true);
-    } catch { alert("Unable to save design."); }
+      const outfitContext = outfitType ? `${outfitType} - ${outfitColors.join(', ')} - ${outfitTags.join(', ')}` : 'Custom';
+      
+      if (isAuthenticated && user) {
+        // Save to Supabase for authenticated users
+        await supabaseApi.createDesign({
+          styleId: selectedStyle.id,
+          handImageUrl: previewUrl || generatedImage,
+          generatedImageUrl: generatedImage,
+          outfitContext,
+          handAnalysis: analysis || undefined,
+          isPublic: false,
+        });
+        setIsSaved(true);
+      } else {
+        // Save to safeStorage for anonymous users
+        const newDesign = { 
+          id: Date.now().toString(), 
+          imageUrl: generatedImage, 
+          styleName: selectedStyle.name, 
+          date: new Date().toLocaleDateString(), 
+          analysis: analysis || undefined, 
+          outfitContext 
+        };
+        const savedDesigns = JSON.parse(safeStorage.getItem('henna_saved_designs') || '[]');
+        savedDesigns.push(newDesign);
+        safeStorage.setItem('henna_saved_designs', JSON.stringify(savedDesigns));
+        setIsSaved(true);
+      }
+    } catch (error: any) { 
+      console.error('Save design error:', error);
+      alert("Unable to save design: " + (error.message || 'Unknown error')); 
+    }
   };
 
   const onBookClick = () => { selectedStyle ? onBookConsultation(selectedStyle.name) : onBookConsultation(); };
@@ -241,6 +284,7 @@ const FALLBACK_STYLES: HennaStyle[] = [
   if (step === GeneratorStep.UPLOAD) {
     return (
       <div className="relative flex min-h-[80vh] w-full flex-col items-center justify-center p-4 sm:p-6 lg:p-8 animate-fadeIn">
+        <SEOHead {...SEO_CONFIGS.design} />
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
           <button onClick={onBack} className="text-[#2B1810]/50 hover:text-[#913e27] flex items-center gap-2 transition-colors">
             <span className="material-symbols-outlined">arrow_back</span>
@@ -338,7 +382,7 @@ const FALLBACK_STYLES: HennaStyle[] = [
                 <div className="flex flex-col items-center gap-4 py-8">
                   <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                   <p className="text-[#191210] dark:text-white text-lg font-medium">Analyzing your hand...</p>
-                  <p className="text-[#2B1810]/60 text-sm">Finding optimal mehndi placement</p>
+                  <p className="text-[#2B1810]/60 text-sm">Finding optimal mehendi placement</p>
                 </div>
               ) : analysis ? (
                 <div className="flex flex-col animate-fadeIn">
@@ -720,11 +764,55 @@ const FALLBACK_STYLES: HennaStyle[] = [
               <div className="w-full max-w-sm border-t border-primary/10 my-4 pt-4 text-center">
                 <p className="text-sm font-medium text-gray-500 mb-4">Share Your Design</p>
                 <div className="flex justify-center gap-4">
-                  {['share', 'link', 'mail', 'favorite'].map(icon => (
-                    <button key={icon} className="p-3 rounded-full bg-primary/5 hover:bg-primary/10 text-primary transition-colors">
-                      <span className="material-symbols-outlined">{icon}</span>
-                    </button>
-                  ))}
+                  <button 
+                    onClick={() => {
+                      if (navigator.share && generatedImage) {
+                        navigator.share({
+                          title: 'My Henna Design',
+                          text: `Check out my ${selectedStyle?.name || 'custom'} henna design!`,
+                          url: window.location.href
+                        }).catch(() => {});
+                      } else {
+                        alert('Sharing is not supported on this device');
+                      }
+                    }}
+                    className="p-3 rounded-full bg-primary/5 hover:bg-primary/10 text-primary transition-colors"
+                    title="Share"
+                  >
+                    <span className="material-symbols-outlined">share</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href).then(() => {
+                        alert('Link copied to clipboard!');
+                      }).catch(() => {
+                        alert('Failed to copy link');
+                      });
+                    }}
+                    className="p-3 rounded-full bg-primary/5 hover:bg-primary/10 text-primary transition-colors"
+                    title="Copy Link"
+                  >
+                    <span className="material-symbols-outlined">link</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const subject = encodeURIComponent('Check out my Henna Design!');
+                      const body = encodeURIComponent(`I created this beautiful ${selectedStyle?.name || 'custom'} henna design. Take a look!`);
+                      window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+                    }}
+                    className="p-3 rounded-full bg-primary/5 hover:bg-primary/10 text-primary transition-colors"
+                    title="Email"
+                  >
+                    <span className="material-symbols-outlined">mail</span>
+                  </button>
+                  <button 
+                    onClick={saveDesign}
+                    disabled={isSaved}
+                    className={`p-3 rounded-full transition-colors ${isSaved ? 'bg-red-100 text-red-500' : 'bg-primary/5 hover:bg-primary/10 text-primary'}`}
+                    title={isSaved ? 'Saved!' : 'Save to Favorites'}
+                  >
+                    <span className="material-symbols-outlined">{isSaved ? 'favorite' : 'favorite_border'}</span>
+                  </button>
                 </div>
               </div>
             </div>

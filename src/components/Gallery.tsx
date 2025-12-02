@@ -1,10 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import api from '../lib/api';
-import { Design, HennaStyle } from '../types';
-import { useAuth } from '../context/AuthContext';
+import { supabaseApi } from '../lib/supabaseApi';
+import { useAuth } from '../context/SupabaseAuthContext';
 import Footer from './Footer';
 import Breadcrumb from './Breadcrumb';
 import ScrollToTop from './ScrollToTop';
+import SEOHead, { SEO_CONFIGS } from './SEOHead';
+
+interface GalleryDesign {
+  id: string;
+  generatedImageUrl: string;
+  style?: { id?: string; name: string } | null;
+  user?: { name: string; avatar?: string } | null;
+  likes?: number;
+  createdAt: string;
+  isApproved?: boolean;
+  userRating?: number;
+}
+
+interface GalleryStyle {
+  id: string;
+  name: string;
+  image_url?: string;
+  category?: string;
+}
 
 interface GalleryProps {
   onBack: () => void;
@@ -14,14 +32,14 @@ interface GalleryProps {
 
 const Gallery: React.FC<GalleryProps> = ({ onBack, onStartDesign, onBooking }) => {
   const { isAuthenticated } = useAuth();
-  const [designs, setDesigns] = useState<Design[]>([]);
-  const [styles, setStyles] = useState<HennaStyle[]>([]);
+  const [designs, setDesigns] = useState<GalleryDesign[]>([]);
+  const [styles, setStyles] = useState<GalleryStyle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStyle, setSelectedStyle] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recent' | 'popular'>('recent');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [selectedDesign, setSelectedDesign] = useState<Design | null>(null);
+  const [selectedDesign, setSelectedDesign] = useState<GalleryDesign | null>(null);
 
   useEffect(() => {
     loadStyles();
@@ -35,7 +53,7 @@ const Gallery: React.FC<GalleryProps> = ({ onBack, onStartDesign, onBooking }) =
 
   const loadStyles = async () => {
     try {
-      const data = await api.getStyles();
+      const data = await supabaseApi.getStyles();
       setStyles(data);
     } catch (error) {
       console.error('Failed to load styles:', error);
@@ -47,13 +65,13 @@ const Gallery: React.FC<GalleryProps> = ({ onBack, onStartDesign, onBooking }) =
     try {
       // Load both gallery designs and approved templates
       const [galleryResult, templates] = await Promise.all([
-        api.getDesignGallery({
+        supabaseApi.getDesignGallery({
           page: pageNum,
           limit: 12,
           style: selectedStyle || undefined,
           sort: sortBy,
         }),
-        pageNum === 1 ? api.getPublicTemplates() : Promise.resolve([])
+        pageNum === 1 ? supabaseApi.getPublicTemplates() : Promise.resolve([])
       ]);
       
       const { designs: newDesigns, pagination } = galleryResult;
@@ -91,7 +109,7 @@ const Gallery: React.FC<GalleryProps> = ({ onBack, onStartDesign, onBooking }) =
   const handleLike = async (designId: string) => {
     if (!isAuthenticated) return;
     try {
-      const { likes } = await api.likeDesign(designId);
+      const { likes } = await supabaseApi.likeDesign(designId);
       setDesigns(prev => prev.map(d => d.id === designId ? { ...d, likes } : d));
       if (selectedDesign?.id === designId) {
         setSelectedDesign(prev => prev ? { ...prev, likes } : null);
@@ -109,6 +127,7 @@ const Gallery: React.FC<GalleryProps> = ({ onBack, onStartDesign, onBooking }) =
 
   return (
     <div className="min-h-screen py-8 px-4 animate-fadeIn">
+      <SEOHead {...SEO_CONFIGS.gallery} />
       <div className="max-w-7xl mx-auto">
         <Breadcrumb items={[
           { label: 'Home', onClick: onBack },
@@ -174,8 +193,9 @@ const Gallery: React.FC<GalleryProps> = ({ onBack, onStartDesign, onBooking }) =
               >
                 <img
                   src={design.generatedImageUrl}
-                  alt={design.style?.name || 'Henna Design'}
+                  alt={`${design.style?.name || 'Custom'} mehendi henna design${design.user?.name ? ` by ${design.user.name}` : ''}`}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  loading="lazy"
                 />
                 {/* Approved Badge */}
                 {(design as any).isApproved && (
@@ -238,7 +258,7 @@ const Gallery: React.FC<GalleryProps> = ({ onBack, onStartDesign, onBooking }) =
                 <div className="md:w-2/3">
                   <img
                     src={selectedDesign.generatedImageUrl}
-                    alt={selectedDesign.style?.name || 'Design'}
+                    alt={`${selectedDesign.style?.name || 'Custom'} mehendi design - detailed view`}
                     className="w-full h-full object-cover"
                   />
                 </div>

@@ -26,9 +26,9 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack }) => {
           <section>
             <h2 className="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mt-8 mb-4">1. Introduction</h2>
             <p>
-              Welcome to Mehndi Design ("we," "our," or "us"). We are committed to protecting your personal information 
+              Welcome to Mehendi ("we," "our," or "us"). We are committed to protecting your personal information 
               and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your 
-              information when you visit our website and use our AI-powered mehndi design services.
+              information when you visit our website and use our AI-powered mehendi design services.
             </p>
           </section>
 
@@ -53,7 +53,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack }) => {
           <section>
             <h2 className="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mt-8 mb-4">3. How We Use Your Information</h2>
             <ul className="list-disc pl-6 space-y-2">
-              <li>To generate personalized mehndi designs using AI</li>
+              <li>To generate personalized mehendi designs using AI</li>
               <li>To process and manage your bookings</li>
               <li>To communicate with you about your account and services</li>
               <li>To improve our AI algorithms and services</li>
@@ -65,7 +65,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack }) => {
             <h2 className="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mt-8 mb-4">4. Photo Privacy</h2>
             <p>
               Your hand photographs are processed securely by our AI system. We do not share your photos with third parties.
-              Photos are used solely for generating your custom mehndi designs. You can request deletion of your photos 
+              Photos are used solely for generating your custom mehendi designs. You can request deletion of your photos 
               at any time by contacting us.
             </p>
           </section>

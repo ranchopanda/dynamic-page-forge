@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/SupabaseAuthContext';
 
 interface HeaderProps {
   onBookClick: () => void;
@@ -7,10 +7,10 @@ interface HeaderProps {
   onGalleryClick: () => void;
   onArtistsClick: () => void;
   onProfileClick: () => void;
-  onAuthClick: () => void;
   onLogoClick: () => void;
-  onAdminClick?: () => void;
   onBlogClick?: () => void;
+  onAdminClick?: () => void;
+  onAuthClick?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -19,24 +19,23 @@ const Header: React.FC<HeaderProps> = ({
   onGalleryClick,
   onArtistsClick,
   onProfileClick,
-  onAuthClick,
   onLogoClick,
-  onAdminClick,
   onBlogClick,
+  onAdminClick,
+  onAuthClick,
 }) => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   return (
     <header className="flex items-center justify-between whitespace-nowrap px-6 lg:px-10 py-4 max-w-7xl mx-auto w-full relative">
-      <div className="flex items-center gap-3 cursor-pointer" onClick={onLogoClick}>
-        <div className="size-6 text-primary">
-          <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 42.4379C4 42.4379 14.0962 36.0744 24 41.1692C35.0664 46.8624 44 42.2078 44 42.2078L44 7.01134C44 7.01134 35.068 11.6577 24.0031 5.96913C14.0971 0.876274 4 7.27094 4 7.27094L4 42.4379Z" fill="currentColor"></path>
-          </svg>
-        </div>
-        <h2 className="text-xl font-bold font-headline tracking-wide">Mehndi Design</h2>
+      <div className="flex items-center gap-2 cursor-pointer" onClick={onLogoClick}>
+        <img 
+          src="/logo.svg" 
+          alt="Mehendi Logo" 
+          className="h-10 w-auto"
+        />
+        <h2 className="text-xl font-bold font-headline tracking-wide" style={{ color: '#c4a574' }}>Mehendi</h2>
       </div>
 
       {/* Desktop Navigation */}
@@ -57,21 +56,21 @@ const Header: React.FC<HeaderProps> = ({
             </button>
           )}
           {user?.role === 'ADMIN' && onAdminClick && (
-            <button onClick={onAdminClick} className="text-sm font-medium leading-normal hover:text-primary transition-colors flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10">
+            <button onClick={onAdminClick} className="text-sm font-medium leading-normal text-primary hover:text-[#a15842] transition-colors flex items-center gap-1">
               <span className="material-symbols-outlined text-base">admin_panel_settings</span>
-              <span className="hidden xl:inline">Admin</span>
+              Admin
+            </button>
+          )}
+          {!user && onAuthClick && (
+            <button onClick={onAuthClick} className="text-sm font-medium leading-normal hover:text-primary transition-colors flex items-center gap-1">
+              <span className="material-symbols-outlined text-base">login</span>
+              Login
             </button>
           )}
         </nav>
 
-        {!user ? (
-          <button
-            onClick={onAuthClick}
-            className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-11 px-6 border-2 border-primary text-primary text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/10 transition-all duration-300"
-          >
-            <span className="truncate">Login</span>
-          </button>
-        ) : (
+        {/* Show profile for logged-in users */}
+        {user && (
           <button
             onClick={onProfileClick}
             className="flex items-center gap-2 cursor-pointer hover:opacity-70 transition-opacity"
@@ -100,16 +99,23 @@ const Header: React.FC<HeaderProps> = ({
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         className="md:hidden text-primary p-2"
+        aria-expanded={isMobileMenuOpen}
+        aria-controls="mobile-menu"
+        aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
       >
-        <span className="material-symbols-outlined">
+        <span className="material-symbols-outlined" aria-hidden="true">
           {isMobileMenuOpen ? 'close' : 'menu'}
         </span>
       </button>
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="absolute top-full left-0 right-0 bg-white dark:bg-background-dark shadow-lg border-t border-primary/10 md:hidden z-50">
-          <nav className="flex flex-col p-4 gap-2">
+        <nav 
+          id="mobile-menu"
+          className="absolute top-full left-0 right-0 bg-white dark:bg-background-dark shadow-lg border-t border-primary/10 md:hidden z-50"
+          aria-label="Mobile navigation"
+        >
+          <div className="flex flex-col p-4 gap-2">
             <button
               onClick={() => { onGalleryClick(); setIsMobileMenuOpen(false); }}
               className="w-full py-3 text-left font-medium hover:text-primary transition-colors"
@@ -128,32 +134,42 @@ const Header: React.FC<HeaderProps> = ({
             >
               My Designs
             </button>
+            {user && (
+              <button
+                onClick={() => { onProfileClick(); setIsMobileMenuOpen(false); }}
+                className="w-full py-3 text-left font-medium hover:text-primary transition-colors flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-base">person</span>
+                Profile
+              </button>
+            )}
             {user?.role === 'ADMIN' && onAdminClick && (
               <button
                 onClick={() => { onAdminClick(); setIsMobileMenuOpen(false); }}
-                className="w-full py-3 text-left font-medium hover:text-primary transition-colors flex items-center gap-2"
+                className="w-full py-3 text-left font-medium text-primary hover:text-[#a15842] transition-colors flex items-center gap-2"
               >
                 <span className="material-symbols-outlined text-base">admin_panel_settings</span>
-                Admin
+                Admin Dashboard
+              </button>
+            )}
+            {!user && onAuthClick && (
+              <button
+                onClick={() => { onAuthClick(); setIsMobileMenuOpen(false); }}
+                className="w-full py-3 text-left font-medium hover:text-primary transition-colors flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-base">login</span>
+                Login
               </button>
             )}
             <hr className="my-2 border-primary/10" />
-            {!user ? (
-              <button
-                onClick={() => { onAuthClick(); setIsMobileMenuOpen(false); }}
-                className="w-full py-3 border-2 border-primary text-primary rounded-full font-bold text-center"
-              >
-                Login
-              </button>
-            ) : null}
             <button
               onClick={() => { onBookClick(); setIsMobileMenuOpen(false); }}
               className="w-full py-3 bg-primary text-white rounded-full font-bold text-center"
             >
               Design My Hand
             </button>
-          </nav>
-        </div>
+          </div>
+        </nav>
       )}
     </header>
   );

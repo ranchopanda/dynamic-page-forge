@@ -17,11 +17,11 @@ When prompted:
 - Set up and deploy: **Y**
 - Which scope: Choose your account
 - Link to existing project: **N**
-- Project name: **henna-harmony-api**
+- Project name: **mehendi-api**
 - Directory: **./server**
 - Override settings: **N**
 
-After deployment, note the URL (e.g., `https://henna-harmony-api.vercel.app`)
+After deployment, note the URL (e.g., `https://mehendi-api.vercel.app`)
 
 ### Step 2: Set Backend Environment Variables
 
@@ -53,7 +53,7 @@ When prompted:
 - Set up and deploy: **Y**
 - Which scope: Choose your account
 - Link to existing project: **N**
-- Project name: **henna-harmony**
+- Project name: **mehendi**
 - Directory: **./** (root)
 - Override settings: **N**
 
@@ -112,7 +112,7 @@ cd .. && vercel --prod
 
 2. **Test the deployment:**
    - Visit your frontend URL
-   - Try signing in with: admin@hennaharmony.com / admin123
+   - Try signing in with: admin@mehendi.com / admin123
    - Test the design flow
 
 ## Troubleshooting

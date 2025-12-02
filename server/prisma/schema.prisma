@@ -156,8 +156,8 @@ model BlogPost {
 
 model SiteSettings {
   id              String   @id @default("settings")
-  siteName        String   @default("Mehndi Design")
-  tagline         String   @default("AI-Powered Custom Mehndi Design Generator")
+  siteName        String   @default("Mehendi Design")
+  tagline         String   @default("AI-Powered Custom Mehendi Design Generator")
   ownerName       String   @default("Himanshi")
   email           String   @default("himanshiparashar44@gmail.com")
   phone           String   @default("+91 7011489500")
@@ -170,7 +170,7 @@ model SiteSettings {
   pinterest       String?
   twitter         String?
   aboutText       String?
-  seoKeywords     String   @default("mehndi design, henna artist Greater Noida, bridal mehndi, AI mehndi generator")
+  seoKeywords     String   @default("mehendi design, henna artist Greater Noida, bridal mehendi, AI mehendi generator")
   googleAnalytics String?
   updatedAt       DateTime @updatedAt
 }

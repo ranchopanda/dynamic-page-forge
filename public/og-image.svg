@@ -1,0 +1,39 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f0e8"/>
+      <stop offset="100%" style="stop-color:#ebe4d8"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c4a574"/>
+      <stop offset="100%" style="stop-color:#a08050"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  
+  <!-- Large centered M logo -->
+  <g transform="translate(400, 120) scale(2.5)">
+    <!-- Stylized M with curves -->
+    <path d="M20 120 Q40 40 60 30 Q80 55 100 15 Q120 55 140 30 Q160 40 180 120" 
+          stroke="url(#gold)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Inner curves -->
+    <path d="M60 30 Q75 70 90 80 Q95 50 100 15" 
+          stroke="url(#gold)" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M100 15 Q105 50 110 80 Q125 70 140 30" 
+          stroke="url(#gold)" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <!-- Left lotus -->
+    <ellipse cx="25" cy="75" rx="8" ry="16" transform="rotate(-25 25 75)" fill="url(#gold)" opacity="0.9"/>
+    <ellipse cx="18" cy="85" rx="6" ry="12" transform="rotate(-45 18 85)" fill="url(#gold)" opacity="0.8"/>
+    <ellipse cx="32" cy="85" rx="6" ry="12" transform="rotate(45 32 85)" fill="url(#gold)" opacity="0.8"/>
+    <circle cx="25" cy="95" r="4" fill="url(#gold)" opacity="0.7"/>
+    <!-- Right lotus -->
+    <ellipse cx="175" cy="75" rx="8" ry="16" transform="rotate(25 175 75)" fill="url(#gold)" opacity="0.9"/>
+    <ellipse cx="182" cy="85" rx="6" ry="12" transform="rotate(45 182 85)" fill="url(#gold)" opacity="0.8"/>
+    <ellipse cx="168" cy="85" rx="6" ry="12" transform="rotate(-45 168 85)" fill="url(#gold)" opacity="0.8"/>
+    <circle cx="175" cy="95" r="4" fill="url(#gold)" opacity="0.7"/>
+  </g>
+  
+  <text x="600" y="480" font-family="Georgia, serif" font-size="72" fill="#c4a574" text-anchor="middle" font-weight="bold">Mehendi</text>
+  <text x="600" y="540" font-family="Arial, sans-serif" font-size="28" fill="#8b7355" text-anchor="middle">AI-Powered Custom Henna Design Generator</text>
+  <text x="600" y="590" font-family="Arial, sans-serif" font-size="20" fill="#a08050" text-anchor="middle">Greater Noida • ₹100/hand • Book Now</text>
+</svg>

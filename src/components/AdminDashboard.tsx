@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import api from '../lib/api';
+import { useAuth } from '../context/SupabaseAuthContext';
+import { supabaseApi } from '../lib/supabaseApi';
 import Header from './Header';
 import Footer from './Footer';
 import Breadcrumb from './Breadcrumb';
@@ -51,8 +51,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setError('');
     try {
       const [statsData, usersData] = await Promise.all([
-        api.getAdminStats(),
-        api.getAdminUsers({ page, limit: 20 })
+        supabaseApi.getAdminStats(),
+        supabaseApi.getAdminUsers({ page, limit: 20 })
       ]);
       setStats(statsData);
       setUsers(usersData.users);
@@ -68,7 +68,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!confirm(`Change user role to ${newRole}?`)) return;
     
     try {
-      await api.updateUserRole(userId, newRole as any);
+      await supabaseApi.updateUserRole(userId, newRole as any);
       loadData(); // Reload data
     } catch (err: any) {
       alert('Failed to update role: ' + err.message);
@@ -253,10 +253,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {user._count.designs}
+                          {user._count?.designs ?? '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {user._count.bookings}
+                          {user._count?.bookings ?? '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <select

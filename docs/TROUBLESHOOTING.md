@@ -50,7 +50,7 @@ The server should start on `http://localhost:3001`
 # Login again
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@hennaharmony.com","password":"admin123"}'
+  -d '{"email":"admin@mehendi.com","password":"admin123"}'
 ```
 
 ---
@@ -133,7 +133,7 @@ curl http://localhost:3001/api/styles
 # Test admin login
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@hennaharmony.com","password":"admin123"}'
+  -d '{"email":"admin@mehendi.com","password":"admin123"}'
 ```
 
 ---
@@ -235,7 +235,7 @@ Run this to verify everything is working:
 ```bash
 #!/bin/bash
 
-echo "🔍 Checking Henna Harmony Setup..."
+echo "🔍 Checking Mehendi Setup..."
 
 # Check backend
 if curl -s http://localhost:3001/api/styles > /dev/null; then

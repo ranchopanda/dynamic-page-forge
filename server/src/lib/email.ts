@@ -64,7 +64,7 @@ export const sendBookingConfirmation = async (
         </div>
         <div class="content">
           <p>Dear ${name},</p>
-          <p>Thank you for choosing Henna Harmony Studio. Your consultation has been confirmed!</p>
+          <p>Thank you for choosing Mehendi Studio. Your consultation has been confirmed!</p>
           
           <div class="code">
             <p style="margin: 0 0 5px 0; color: #8d6458;">Confirmation Code</p>
@@ -87,7 +87,7 @@ export const sendBookingConfirmation = async (
           <p style="margin-top: 20px;">We look forward to bringing your henna vision to life!</p>
         </div>
         <div class="footer">
-          <p>© 2024 Henna Harmony Studio. All Rights Reserved.</p>
+          <p>© 2024 Mehendi Studio. All Rights Reserved.</p>
         </div>
       </div>
     </body>
@@ -119,11 +119,11 @@ export const sendWelcomeEmail = async (email: string, name: string): Promise<voi
     <body>
       <div class="container">
         <div class="header">
-          <h1>Welcome to Henna Harmony</h1>
+          <h1>Welcome to Mehendi</h1>
         </div>
         <div class="content">
           <p>Dear ${name},</p>
-          <p>Welcome to Henna Harmony Studio! We're thrilled to have you join our community of brides seeking the perfect mehndi design.</p>
+          <p>Welcome to Mehendi Studio! We're thrilled to have you join our community of brides seeking the perfect mehendi design.</p>
           <p>With our AI-powered design studio, you can:</p>
           <ul style="text-align: left; display: inline-block;">
             <li>Upload your hand for personalized analysis</li>
@@ -134,7 +134,7 @@ export const sendWelcomeEmail = async (email: string, name: string): Promise<voi
           <a href="${config.frontendUrl}" class="btn">Start Designing</a>
         </div>
         <div class="footer">
-          <p>© 2024 Henna Harmony Studio. All Rights Reserved.</p>
+          <p>© 2024 Mehendi Studio. All Rights Reserved.</p>
         </div>
       </div>
     </body>
@@ -143,7 +143,7 @@ export const sendWelcomeEmail = async (email: string, name: string): Promise<voi
 
   await sendEmail({
     to: email,
-    subject: 'Welcome to Henna Harmony Studio! ✨',
+    subject: 'Welcome to Mehendi Studio! ✨',
     html,
   });
 };

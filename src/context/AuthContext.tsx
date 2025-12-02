@@ -20,7 +20,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (data: { email: string; password: string; name: string; phone?: string }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateProfile: (data: { name?: string; phone?: string; avatar?: string }) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -60,8 +60,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(user);
   };
 
-  const logout = () => {
-    api.logout();
+  const logout = async () => {
+    await api.logout();
     setUser(null);
   };
 

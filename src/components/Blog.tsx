@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import api from '../lib/api';
+import { supabaseApi } from '../lib/supabaseApi';
 import Header from './Header';
 import Footer from './Footer';
 import Breadcrumb from './Breadcrumb';
+import SEOHead, { SEO_CONFIGS } from './SEOHead';
 
 interface BlogPost {
   id: string;
@@ -43,12 +44,25 @@ const Blog: React.FC<BlogProps> = ({ onBack, onStartDesign, onGallery, onArtists
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const params = selectedCategory ? `?category=${selectedCategory}` : '';
-      const response = await fetch(`/api/blog${params}`);
-      const data = await response.json();
-      setPosts(data.posts || []);
+      const result = await supabaseApi.getBlogPosts({ 
+        category: selectedCategory || undefined 
+      });
+      setPosts(result.posts.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        slug: p.slug,
+        excerpt: p.excerpt,
+        content: p.content,
+        coverImage: p.cover_image,
+        category: p.category,
+        tags: JSON.stringify(p.tags || []),
+        author: p.author,
+        views: p.views,
+        createdAt: p.created_at,
+      })));
     } catch (error) {
       console.error('Error fetching posts:', error);
+      setPosts([]);
     } finally {
       setLoading(false);
     }
@@ -56,9 +70,10 @@ const Blog: React.FC<BlogProps> = ({ onBack, onStartDesign, onGallery, onArtists
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/blog/categories');
-      const data = await response.json();
-      setCategories(data || []);
+      // Get unique categories from posts
+      const result = await supabaseApi.getBlogPosts({ limit: 100 });
+      const uniqueCategories = [...new Set(result.posts.map((p: any) => p.category))];
+      setCategories(uniqueCategories.filter(Boolean) as string[]);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
@@ -67,9 +82,22 @@ const Blog: React.FC<BlogProps> = ({ onBack, onStartDesign, onGallery, onArtists
   const fetchPost = async (slug: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/blog/post/${slug}`);
-      const data = await response.json();
-      setSelectedPost(data);
+      const post = await supabaseApi.getBlogPost(slug);
+      if (post) {
+        setSelectedPost({
+          id: post.id,
+          title: post.title,
+          slug: post.slug,
+          excerpt: post.excerpt,
+          content: post.content,
+          coverImage: post.cover_image,
+          category: post.category,
+          tags: JSON.stringify(post.tags || []),
+          author: post.author,
+          views: post.views,
+          createdAt: post.created_at,
+        });
+      }
     } catch (error) {
       console.error('Error fetching post:', error);
     } finally {
@@ -97,6 +125,18 @@ const Blog: React.FC<BlogProps> = ({ onBack, onStartDesign, onGallery, onArtists
   if (selectedPost) {
     return (
       <div className="min-h-screen bg-background-light dark:bg-background-dark">
+        <SEOHead
+          title={selectedPost.title}
+          description={selectedPost.excerpt}
+          keywords={`${selectedPost.category}, mehendi, henna, ${parseTags(selectedPost.tags).join(', ')}`}
+          image={selectedPost.coverImage}
+          url={`/blog/${selectedPost.slug}`}
+          type="article"
+          author={selectedPost.author}
+          publishedTime={selectedPost.createdAt}
+          section={selectedPost.category}
+          tags={parseTags(selectedPost.tags)}
+        />
         <Header
           onBookClick={onStartDesign}
           onSavedClick={onSaved}
@@ -158,10 +198,44 @@ const Blog: React.FC<BlogProps> = ({ onBack, onStartDesign, onGallery, onArtists
             </div>
           )}
 
+          {/* Article Schema JSON-LD */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Article",
+                "headline": selectedPost.title,
+                "description": selectedPost.excerpt,
+                "image": selectedPost.coverImage || "https://henna-harmony-him1.vercel.app/og-image.png",
+                "author": {
+                  "@type": "Person",
+                  "name": selectedPost.author
+                },
+                "publisher": {
+                  "@type": "Organization",
+                  "name": "Mehendi by Himanshi",
+                  "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://henna-harmony-him1.vercel.app/logo.svg"
+                  }
+                },
+                "datePublished": selectedPost.createdAt,
+                "dateModified": selectedPost.createdAt,
+                "mainEntityOfPage": {
+                  "@type": "WebPage",
+                  "@id": `https://henna-harmony-him1.vercel.app/blog/${selectedPost.slug}`
+                },
+                "articleSection": selectedPost.category,
+                "keywords": parseTags(selectedPost.tags).join(", ")
+              })
+            }}
+          />
+
           {/* CTA */}
           <div className="mt-12 bg-gradient-to-r from-primary to-[#a15842] rounded-2xl p-8 text-center text-white">
             <h3 className="text-2xl font-bold mb-2">Ready to Create Your Own Design?</h3>
-            <p className="text-white/80 mb-4">Try our AI-powered mehndi design generator</p>
+            <p className="text-white/80 mb-4">Try our AI-powered mehendi design generator</p>
             <button
               onClick={onStartDesign}
               className="px-6 py-3 bg-white text-primary rounded-full font-bold hover:bg-white/90 transition-colors"
@@ -179,6 +253,7 @@ const Blog: React.FC<BlogProps> = ({ onBack, onStartDesign, onGallery, onArtists
   // Blog List View
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
+      <SEOHead {...SEO_CONFIGS.blog} />
       <Header
         onBookClick={onStartDesign}
         onSavedClick={onSaved}
@@ -199,10 +274,10 @@ const Blog: React.FC<BlogProps> = ({ onBack, onStartDesign, onGallery, onArtists
 
         <div className="text-center mb-12">
           <h1 className="font-headline text-4xl md:text-5xl font-bold text-text-primary-light dark:text-text-primary-dark mb-4">
-            Mehndi Design Blog
+            Mehendi Design Blog
           </h1>
           <p className="text-text-primary-light/70 dark:text-text-primary-dark/70 max-w-2xl mx-auto">
-            Tips, trends, and inspiration for beautiful henna designs. Learn about bridal mehndi, Arabic patterns, and more.
+            Tips, trends, and inspiration for beautiful henna designs. Learn about bridal mehendi, Arabic patterns, and more.
           </p>
         </div>
 
@@ -243,7 +318,7 @@ const Blog: React.FC<BlogProps> = ({ onBack, onStartDesign, onGallery, onArtists
           <div className="text-center py-12">
             <span className="material-symbols-outlined text-6xl text-primary/30 mb-4">article</span>
             <h3 className="text-xl font-semibold mb-2">No blog posts yet</h3>
-            <p className="text-text-primary-light/60">Check back soon for mehndi tips and inspiration!</p>
+            <p className="text-text-primary-light/60">Check back soon for mehendi tips and inspiration!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -287,20 +362,20 @@ const Blog: React.FC<BlogProps> = ({ onBack, onStartDesign, onGallery, onArtists
         {/* SEO Content Section */}
         <section className="mt-16 bg-primary/5 rounded-3xl p-8 md:p-12">
           <h2 className="font-headline text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-4">
-            About Mehndi Design
+            About Mehendi Design
           </h2>
           <div className="prose max-w-none text-text-primary-light/70 dark:text-text-primary-dark/70">
             <p>
-              Welcome to Mehndi Design, your ultimate destination for AI-powered henna design generation and professional mehndi artist services in Greater Noida. 
-              Our blog covers everything from traditional Indian bridal mehndi to modern Arabic patterns, helping you find the perfect design for your special occasion.
+              Welcome to Mehendi Design, your ultimate destination for AI-powered henna design generation and professional mehendi artist services in Greater Noida. 
+              Our blog covers everything from traditional Indian bridal mehendi to modern Arabic patterns, helping you find the perfect design for your special occasion.
             </p>
             <p className="mt-4">
-              Whether you're preparing for a wedding, Karwa Chauth, Eid, Diwali, or any festive celebration, our AI technology creates personalized mehndi designs 
-              that perfectly match your hand shape and style preferences. Book our professional henna artist Himanshi for mehndi application in Greater Noida and surrounding areas.
+              Whether you're preparing for a wedding, Karwa Chauth, Eid, Diwali, or any festive celebration, our AI technology creates personalized mehendi designs 
+              that perfectly match your hand shape and style preferences. Book our professional henna artist Himanshi for mehendi application in Greater Noida and surrounding areas.
             </p>
             <p className="mt-4">
               <strong>Service Areas:</strong> Greater Noida, Noida, Ghaziabad, Delhi NCR<br />
-              <strong>Specialties:</strong> Bridal Mehndi, Arabic Mehndi, Indo-Arabic, Mandala, Festive Designs<br />
+              <strong>Specialties:</strong> Bridal Mehendi, Arabic Mehendi, Indo-Arabic, Mandala, Festive Designs<br />
               <strong>Pricing:</strong> Starting at ₹100/hand
             </p>
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../lib/api';
+import { supabaseApi } from '../lib/supabaseApi';
 
 interface Design {
   id: string;
@@ -36,7 +36,7 @@ const AdminDesignReview: React.FC = () => {
 
   const loadStats = async () => {
     try {
-      const data = await api.getDesignReviewStats();
+      const data = await supabaseApi.getDesignReviewStats();
       setStats(data);
     } catch (error) {
       console.error('Failed to load stats:', error);
@@ -49,7 +49,7 @@ const AdminDesignReview: React.FC = () => {
       const params: any = { page, limit: 12 };
       if (filter !== 'all') params.status = filter;
       
-      const data = await api.getAdminDesigns(params);
+      const data = await supabaseApi.getAdminDesigns(params);
       setDesigns(data.designs);
       setPagination(data.pagination);
     } catch (error) {
@@ -63,7 +63,7 @@ const AdminDesignReview: React.FC = () => {
     if (!selectedDesign) return;
 
     try {
-      await api.reviewDesign(selectedDesign.id, {
+      await supabaseApi.reviewDesign(selectedDesign.id, {
         status,
         notes: reviewNotes,
         canBeTemplate: status === 'APPROVED' ? canBeTemplate : false,

@@ -1,8 +1,55 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { validate } from '../middleware/validate.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 const router = Router();
+
+// Validation schemas
+const updateUserRoleSchema = z.object({
+  body: z.object({
+    role: z.enum(['USER', 'ARTIST', 'ADMIN'], { 
+      errorMap: () => ({ message: 'Role must be USER, ARTIST, or ADMIN' })
+    }),
+  }),
+});
+
+const createStyleSchema = z.object({
+  body: z.object({
+    name: z.string().min(1, 'Name is required').max(100),
+    description: z.string().max(1000).optional(),
+    imageUrl: z.string().url('Invalid image URL').optional(),
+    promptModifier: z.string().max(500).optional(),
+    category: z.string().max(50).optional(),
+    complexity: z.enum(['SIMPLE', 'MEDIUM', 'COMPLEX']).optional(),
+    coverage: z.enum(['MINIMAL', 'PARTIAL', 'FULL']).optional(),
+  }),
+});
+
+const updateStyleSchema = z.object({
+  body: z.object({
+    name: z.string().min(1).max(100).optional(),
+    description: z.string().max(1000).optional(),
+    imageUrl: z.string().url('Invalid image URL').optional(),
+    promptModifier: z.string().max(500).optional(),
+    category: z.string().max(50).optional(),
+    complexity: z.enum(['SIMPLE', 'MEDIUM', 'COMPLEX']).optional(),
+    coverage: z.enum(['MINIMAL', 'PARTIAL', 'FULL']).optional(),
+    isActive: z.boolean().optional(),
+  }),
+});
+
+const reviewDesignSchema = z.object({
+  body: z.object({
+    status: z.enum(['APPROVED', 'REJECTED'], {
+      errorMap: () => ({ message: 'Status must be APPROVED or REJECTED' })
+    }),
+    notes: z.string().max(1000).optional(),
+    canBeTemplate: z.boolean().optional(),
+  }),
+});
 
 // Dashboard stats
 router.get('/stats', authenticate, requireRole('ADMIN'), async (_req: Request, res: Response) => {
@@ -115,7 +162,7 @@ router.get('/users', authenticate, requireRole('ADMIN'), async (req: Request, re
 });
 
 // Update user role
-router.patch('/users/:id/role', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
+router.patch('/users/:id/role', authenticate, requireRole('ADMIN'), validate(updateUserRoleSchema), async (req: Request, res: Response) => {
   const { role } = req.body;
 
   const user = await prisma.user.update({
@@ -147,7 +194,7 @@ router.get('/styles', authenticate, requireRole('ADMIN'), async (_req: Request, 
 });
 
 // Create new style
-router.post('/styles', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
+router.post('/styles', authenticate, requireRole('ADMIN'), validate(createStyleSchema), async (req: Request, res: Response) => {
   const { name, description, imageUrl, promptModifier, category, complexity, coverage } = req.body;
 
   const style = await prisma.hennaStyle.create({
@@ -167,7 +214,7 @@ router.post('/styles', authenticate, requireRole('ADMIN'), async (req: Request, 
 });
 
 // Update style
-router.patch('/styles/:id', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
+router.patch('/styles/:id', authenticate, requireRole('ADMIN'), validate(updateStyleSchema), async (req: Request, res: Response) => {
   const { name, description, imageUrl, promptModifier, category, complexity, coverage, isActive } = req.body;
 
   const style = await prisma.hennaStyle.update({
@@ -274,13 +321,8 @@ router.get('/designs/stats', authenticate, requireRole('ADMIN'), async (_req: Re
 });
 
 // Review a design (approve/reject)
-router.patch('/designs/:id/review', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
+router.patch('/designs/:id/review', authenticate, requireRole('ADMIN'), validate(reviewDesignSchema), async (req: Request, res: Response) => {
   const { status, notes, canBeTemplate } = req.body;
-
-  if (!['APPROVED', 'REJECTED'].includes(status)) {
-    res.status(400).json({ error: 'Invalid status. Must be APPROVED or REJECTED' });
-    return;
-  }
 
   const design = await prisma.design.update({
     where: { id: req.params.id },

@@ -1,9 +1,37 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { validate } from '../middleware/validate.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 const router = Router();
+
+// Validation schemas
+const createStyleSchema = z.object({
+  body: z.object({
+    name: z.string().min(1, 'Name is required').max(100),
+    description: z.string().max(1000).optional(),
+    imageUrl: z.string().url('Invalid image URL').optional(),
+    promptModifier: z.string().max(500).optional(),
+    category: z.string().max(50).optional(),
+    complexity: z.enum(['SIMPLE', 'MEDIUM', 'COMPLEX']).optional(),
+    coverage: z.enum(['MINIMAL', 'PARTIAL', 'FULL']).optional(),
+  }),
+});
+
+const updateStyleSchema = z.object({
+  body: z.object({
+    name: z.string().min(1).max(100).optional(),
+    description: z.string().max(1000).optional(),
+    imageUrl: z.string().url('Invalid image URL').optional(),
+    promptModifier: z.string().max(500).optional(),
+    category: z.string().max(50).optional(),
+    complexity: z.enum(['SIMPLE', 'MEDIUM', 'COMPLEX']).optional(),
+    coverage: z.enum(['MINIMAL', 'PARTIAL', 'FULL']).optional(),
+    isActive: z.boolean().optional(),
+  }),
+});
 
 // Get all active styles
 router.get('/', async (_req: Request, res: Response) => {
@@ -29,7 +57,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // Create style (admin only)
-router.post('/', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
+router.post('/', authenticate, requireRole('ADMIN'), validate(createStyleSchema), async (req: Request, res: Response) => {
   const { name, description, imageUrl, promptModifier, category, complexity, coverage } = req.body;
 
   const style = await prisma.hennaStyle.create({
@@ -48,7 +76,7 @@ router.post('/', authenticate, requireRole('ADMIN'), async (req: Request, res: R
 });
 
 // Update style (admin only)
-router.patch('/:id', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
+router.patch('/:id', authenticate, requireRole('ADMIN'), validate(updateStyleSchema), async (req: Request, res: Response) => {
   const { name, description, imageUrl, promptModifier, category, complexity, coverage, isActive } = req.body;
 
   const style = await prisma.hennaStyle.update({

@@ -60,12 +60,20 @@ router.post('/register', validate(registerSchema), async (req: Request, res: Res
     role: user.role,
   });
 
+  // Set httpOnly cookie
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
   // Send welcome email (non-blocking)
   sendWelcomeEmail(user.email, user.name).catch(console.error);
 
   res.status(201).json({
     user,
-    token,
+    token, // Still send token for backward compatibility during migration
   });
 });
 
@@ -89,6 +97,14 @@ router.post('/login', validate(loginSchema), async (req: Request, res: Response)
     role: user.role,
   });
 
+  // Set httpOnly cookie
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
   res.json({
     user: {
       id: user.id,
@@ -97,7 +113,7 @@ router.post('/login', validate(loginSchema), async (req: Request, res: Response)
       role: user.role,
       avatar: user.avatar,
     },
-    token,
+    token, // Still send token for backward compatibility during migration
   });
 });
 
@@ -174,6 +190,16 @@ router.post('/change-password', authenticate, async (req: Request, res: Response
   });
 
   res.json({ message: 'Password updated successfully' });
+});
+
+// Logout - clear httpOnly cookie
+router.post('/logout', (_req: Request, res: Response) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  });
+  res.json({ message: 'Logged out successfully' });
 });
 
 export default router;

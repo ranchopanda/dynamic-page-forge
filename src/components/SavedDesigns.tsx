@@ -1,9 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import api from '../lib/api';
-import { Design } from '../types';
+import { useAuth } from '../context/SupabaseAuthContext';
+import { supabaseApi } from '../lib/supabaseApi';
+import { safeStorage } from '../lib/storage';
 import Breadcrumb from './Breadcrumb';
 import ScrollToTop from './ScrollToTop';
+
+interface LocalDesign {
+  id: string;
+  generatedImageUrl: string;
+  handImageUrl?: string;
+  style?: { id?: string; name: string } | null;
+  createdAt: string;
+  isPublic?: boolean;
+  likes?: number;
+  reviewStatus?: string;
+}
 
 interface SavedDesignsProps {
   onStartNew: () => void;
@@ -14,20 +25,49 @@ interface SavedDesignsProps {
 }
 
 const SavedDesigns: React.FC<SavedDesignsProps> = ({ onStartNew, onBack, onGallery, onArtists, onBooking }) => {
-  const { isAuthenticated } = useAuth();
-  const [designs, setDesigns] = useState<Design[]>([]);
+  const { isAuthenticated, user } = useAuth();
+  const [designs, setDesigns] = useState<LocalDesign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'public' | 'private'>('all');
 
   useEffect(() => {
     loadDesigns();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   const loadDesigns = async () => {
     setIsLoading(true);
     try {
-      // Always use localStorage
-      const stored = localStorage.getItem('henna_saved_designs');
+      if (isAuthenticated && user) {
+        // Use Supabase for authenticated users
+        const supabaseDesigns = await supabaseApi.getMyDesigns();
+        setDesigns(supabaseDesigns.map((d: any) => ({
+          id: d.id,
+          generatedImageUrl: d.generated_image_url,
+          handImageUrl: d.hand_image_url,
+          style: d.style ? { name: d.style.name, id: d.style.id } : null,
+          createdAt: d.created_at,
+          isPublic: d.is_public,
+          likes: d.likes || 0,
+          reviewStatus: d.review_status,
+        })));
+      } else {
+        // Use safeStorage for anonymous users
+        const stored = safeStorage.getItem('henna_saved_designs');
+        if (stored) {
+          const localDesigns = JSON.parse(stored);
+          setDesigns(localDesigns.map((d: any) => ({
+            id: d.id,
+            generatedImageUrl: d.imageUrl,
+            style: { name: d.styleName },
+            createdAt: d.date,
+            isPublic: false,
+          })));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load designs:', error);
+      // Fallback to safeStorage on error
+      const stored = safeStorage.getItem('henna_saved_designs');
       if (stored) {
         const localDesigns = JSON.parse(stored);
         setDesigns(localDesigns.map((d: any) => ({
@@ -38,8 +78,6 @@ const SavedDesigns: React.FC<SavedDesignsProps> = ({ onStartNew, onBack, onGalle
           isPublic: false,
         })));
       }
-    } catch (error) {
-      console.error('Failed to load designs:', error);
     } finally {
       setIsLoading(false);
     }
@@ -50,15 +88,21 @@ const SavedDesigns: React.FC<SavedDesignsProps> = ({ onStartNew, onBack, onGalle
     if (!confirm('Are you sure you want to delete this design?')) return;
 
     try {
-      // Always use localStorage
-      const stored = localStorage.getItem('henna_saved_designs');
-      if (stored) {
-        const localDesigns = JSON.parse(stored).filter((d: any) => d.id !== id);
-        localStorage.setItem('henna_saved_designs', JSON.stringify(localDesigns));
+      if (isAuthenticated && user) {
+        // Delete from Supabase
+        await supabaseApi.deleteDesign(id);
+      } else {
+        // Delete from safeStorage
+        const stored = safeStorage.getItem('henna_saved_designs');
+        if (stored) {
+          const localDesigns = JSON.parse(stored).filter((d: any) => d.id !== id);
+          safeStorage.setItem('henna_saved_designs', JSON.stringify(localDesigns));
+        }
       }
       setDesigns(prev => prev.filter(d => d.id !== id));
     } catch (error) {
       console.error('Failed to delete design:', error);
+      alert('Failed to delete design. Please try again.');
     }
   };
 

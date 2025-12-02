@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import api from '../lib/api';
+import { supabaseApi } from '../lib/supabaseApi';
 import { ArtistProfile, Review } from '../types';
 import Footer from './Footer';
 import Breadcrumb from './Breadcrumb';
 import ScrollToTop from './ScrollToTop';
+import SEOHead, { SEO_CONFIGS } from './SEOHead';
 
 interface ArtistsProps {
   onBack: () => void;
@@ -23,7 +24,7 @@ const Artists: React.FC<ArtistsProps> = ({ onBack, onBookArtist, onStartDesign, 
 
   const loadArtists = async () => {
     try {
-      const data = await api.getArtists(true);
+      const data = await supabaseApi.getArtists(true);
       setArtists(data);
     } catch (error) {
       console.error('Failed to load artists:', error);
@@ -34,7 +35,7 @@ const Artists: React.FC<ArtistsProps> = ({ onBack, onBookArtist, onStartDesign, 
 
   const viewArtist = async (artist: ArtistProfile) => {
     try {
-      const fullData = await api.getArtist(artist.id);
+      const fullData = await supabaseApi.getArtist(artist.id);
       setSelectedArtist(fullData);
     } catch (error) {
       console.error('Failed to load artist details:', error);
@@ -65,6 +66,7 @@ const Artists: React.FC<ArtistsProps> = ({ onBack, onBookArtist, onStartDesign, 
 
   return (
     <div className="min-h-screen py-8 px-4 animate-fadeIn">
+      <SEOHead {...SEO_CONFIGS.artists} />
       <div className="max-w-6xl mx-auto">
         <Breadcrumb items={[
           { label: 'Home', onClick: onBack },

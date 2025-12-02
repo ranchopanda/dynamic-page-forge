@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import api from '../lib/api';
+import { useAuth } from '../context/SupabaseAuthContext';
+import { supabaseApi } from '../lib/supabaseApi';
 import { Booking, Design } from '../types';
 import Header from './Header';
 import Footer from './Footer';
@@ -14,9 +14,10 @@ interface ProfileProps {
   onSaved?: () => void;
   onBooking?: () => void;
   onAuth?: () => void;
+  onAdmin?: () => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ onBack, onViewDesign, onStartDesign, onGallery, onArtists, onSaved, onBooking, onAuth }) => {
+const Profile: React.FC<ProfileProps> = ({ onBack, onViewDesign, onStartDesign, onGallery, onArtists, onSaved, onBooking, onAuth, onAdmin }) => {
   const { user, updateProfile, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'designs' | 'bookings' | 'settings'>('designs');
   const [designs, setDesigns] = useState<Design[]>([]);
@@ -39,11 +40,11 @@ const Profile: React.FC<ProfileProps> = ({ onBack, onViewDesign, onStartDesign, 
     setIsLoading(true);
     try {
       const [designsData, bookingsData] = await Promise.all([
-        api.getMyDesigns(),
-        api.getMyBookings(),
+        supabaseApi.getMyDesigns(),
+        supabaseApi.getMyBookings(),
       ]);
-      setDesigns(designsData);
-      setBookings(bookingsData);
+      setDesigns(designsData as any);
+      setBookings(bookingsData as any);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -63,7 +64,7 @@ const Profile: React.FC<ProfileProps> = ({ onBack, onViewDesign, onStartDesign, 
   const handleDeleteDesign = async (id: string) => {
     if (!confirm('Are you sure you want to delete this design?')) return;
     try {
-      await api.deleteDesign(id);
+      await supabaseApi.deleteDesign(id);
       setDesigns(prev => prev.filter(d => d.id !== id));
     } catch (error) {
       console.error('Failed to delete design:', error);
@@ -73,7 +74,7 @@ const Profile: React.FC<ProfileProps> = ({ onBack, onViewDesign, onStartDesign, 
   const handleCancelBooking = async (id: string) => {
     if (!confirm('Are you sure you want to cancel this booking?')) return;
     try {
-      await api.cancelBooking(id);
+      await supabaseApi.cancelBooking(id);
       setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'CANCELLED' } : b));
     } catch (error) {
       console.error('Failed to cancel booking:', error);
@@ -90,7 +91,45 @@ const Profile: React.FC<ProfileProps> = ({ onBack, onViewDesign, onStartDesign, 
     }
   };
 
-  if (!user) return null;
+  // Only admins have profiles
+  if (!user) {
+    return (
+      <div className="min-h-screen animate-fadeIn">
+        <Header
+          onBookClick={onStartDesign || (() => {})}
+          onSavedClick={onSaved || (() => {})}
+          onGalleryClick={onGallery || (() => {})}
+          onArtistsClick={onArtists || (() => {})}
+          onProfileClick={() => {}}
+          onAuthClick={onAuth || (() => {})}
+          onLogoClick={onBack}
+        />
+        <div className="max-w-2xl mx-auto py-16 px-4 text-center">
+          <div className="bg-white dark:bg-background-dark rounded-2xl p-8 shadow-lg">
+            <span className="material-symbols-outlined text-6xl text-primary mb-4">admin_panel_settings</span>
+            <h2 className="text-2xl font-bold mb-4">Admin Access Only</h2>
+            <p className="text-text-primary-light/70 mb-6">
+              This page is for administrators only. Regular users don't need accounts - you can use all features freely!
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={onAuth}
+                className="px-6 py-3 border-2 border-primary text-primary rounded-full font-bold hover:bg-primary/10 transition-colors"
+              >
+                Admin Login
+              </button>
+              <button
+                onClick={onBack}
+                className="px-6 py-3 bg-primary text-white rounded-full font-bold hover:bg-[#a15842] transition-colors"
+              >
+                Back to Home
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen animate-fadeIn">
@@ -122,22 +161,33 @@ const Profile: React.FC<ProfileProps> = ({ onBack, onViewDesign, onStartDesign, 
               <p className="text-text-primary-light/70 dark:text-text-primary-dark/70">{user.email}</p>
               <div className="flex flex-wrap gap-4 mt-3 justify-center md:justify-start">
                 <span className="text-sm bg-primary/10 px-3 py-1 rounded-full">
-                  {user._count?.designs || 0} Designs
+                  {designs.length} Designs
                 </span>
                 <span className="text-sm bg-primary/10 px-3 py-1 rounded-full">
-                  {user._count?.bookings || 0} Bookings
+                  {bookings.length} Bookings
                 </span>
                 <span className="text-sm bg-accent-gold/20 text-accent-gold px-3 py-1 rounded-full capitalize">
                   {user.role.toLowerCase()}
                 </span>
               </div>
             </div>
-            <button
-              onClick={logout}
-              className="px-6 py-2 border border-red-300 text-red-500 rounded-full hover:bg-red-50 transition-colors"
-            >
-              Sign Out
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {user.role === 'ADMIN' && onAdmin && (
+                <button
+                  onClick={onAdmin}
+                  className="px-6 py-2 bg-primary text-white rounded-full hover:bg-[#a15842] transition-colors flex items-center gap-2 justify-center"
+                >
+                  <span className="material-symbols-outlined text-lg">admin_panel_settings</span>
+                  Admin Dashboard
+                </button>
+              )}
+              <button
+                onClick={logout}
+                className="px-6 py-2 border border-red-300 text-red-500 rounded-full hover:bg-red-50 transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
 

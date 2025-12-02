@@ -1,0 +1,55 @@
+{
+  "name": "Mehendi - AI Henna Design Generator",
+  "short_name": "Mehendi",
+  "description": "Create stunning, personalized mehendi designs in seconds with AI. Perfect for weddings, festivals, and special occasions.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf8f5",
+  "theme_color": "#c4a574",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-IN",
+  "categories": ["lifestyle", "design", "beauty"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/og-image.svg",
+      "sizes": "1200x630",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "Mehendi AI Design Generator Homepage"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Design My Hand",
+      "short_name": "Design",
+      "description": "Start creating your custom mehendi design",
+      "url": "/design",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Gallery",
+      "short_name": "Gallery",
+      "description": "Browse mehendi design gallery",
+      "url": "/gallery",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Book Artist",
+      "short_name": "Book",
+      "description": "Book a professional henna artist",
+      "url": "/booking",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

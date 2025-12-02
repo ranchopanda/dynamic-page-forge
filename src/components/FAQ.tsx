@@ -8,15 +8,15 @@ interface FAQItem {
 const faqs: FAQItem[] = [
   {
     question: 'How does AI henna design generation work?',
-    answer: 'Simply upload a photo of your hand, select your preferred style (Arabic, Indian, Modern, etc.), and our AI analyzes your hand shape to generate custom mehndi designs that perfectly fit your hand contours. The process takes less than 30 seconds.'
+    answer: 'Simply upload a photo of your hand, select your preferred style (Arabic, Indian, Modern, etc.), and our AI analyzes your hand shape to generate custom mehendi designs that perfectly fit your hand contours. The process takes less than 30 seconds.'
   },
   {
-    question: 'Is Henna Harmony free to use?',
+    question: 'Is Mehendi free to use?',
     answer: 'Yes! You can generate and preview henna designs for free. We offer premium features for saving unlimited designs and booking professional henna artists.'
   },
   {
     question: 'Can I use these designs for my wedding?',
-    answer: 'Absolutely! Our AI specializes in bridal mehndi designs. You can generate designs, save your favorites, and even book one of our professional artists to apply the design for your special day.'
+    answer: 'Absolutely! Our AI specializes in bridal mehendi designs. You can generate designs, save your favorites, and even book one of our professional artists to apply the design for your special day.'
   },
   {
     question: 'What henna styles are available?',
@@ -69,6 +69,8 @@ const FAQ: React.FC = () => {
                 onClick={() => toggleFAQ(index)}
                 className="w-full py-6 flex items-center justify-between text-left group"
                 aria-expanded={openIndex === index}
+                aria-controls={`faq-answer-${index}`}
+                id={`faq-question-${index}`}
               >
                 <span className="font-medium text-lg text-text-primary-light dark:text-text-primary-dark group-hover:text-primary transition-colors pr-4">
                   {faq.question}
@@ -82,11 +84,15 @@ const FAQ: React.FC = () => {
                 </span>
               </button>
               <div 
+                id={`faq-answer-${index}`}
+                role="region"
+                aria-labelledby={`faq-question-${index}`}
                 className={`overflow-hidden transition-all duration-300 ease-in-out ${
                   openIndex === index ? 'max-h-96 pb-6' : 'max-h-0'
                 }`}
+                hidden={openIndex !== index}
               >
-                <p className="text-text-primary-light/70 dark:text-text-primary-dark/70 leading-relaxed">
+                <p className="text-text-primary-light/80 dark:text-text-primary-dark/80 leading-relaxed">
                   {faq.answer}
                 </p>
               </div>
@@ -100,7 +106,7 @@ const FAQ: React.FC = () => {
             Still have questions?
           </p>
           <a 
-            href="mailto:support@hennaharmony.com"
+            href="mailto:himanshiparashar44@gmail.com"
             className="inline-flex items-center gap-2 text-primary font-medium hover:underline"
           >
             <span className="material-symbols-outlined">mail</span>

@@ -1,4 +1,4 @@
-# 🔐 Admin Guide - Henna Harmony Studio
+# 🔐 Admin Guide - Mehendi
 
 ## 📋 Table of Contents
 1. [Admin Access](#admin-access)
@@ -17,7 +17,7 @@
 After running the database seed, you'll have an admin account:
 
 ```
-Email: admin@hennaharmony.com
+Email: admin@mehendi.com
 Password: admin123
 ```
 
@@ -40,12 +40,12 @@ The seed script creates these accounts:
 
 ```typescript
 // Admin Account
-Email: admin@hennaharmony.com
+Email: admin@mehendi.com
 Password: admin123
 Role: ADMIN
 
 // Artist Account
-Email: priya@hennaharmony.com
+Email: priya@mehendi.com
 Password: artist123
 Role: ARTIST
 ```
@@ -190,7 +190,7 @@ Content-Type: application/json
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@hennaharmony.com",
+    "email": "admin@mehendi.com",
     "password": "admin123"
   }'
 ```
@@ -220,7 +220,7 @@ curl -X PATCH http://localhost:3001/api/admin/users/USER_ID_HERE/role \
 ### Method 2: Using Postman
 
 1. **Import Collection**
-   - Create new collection "Henna Harmony Admin"
+   - Create new collection "Mehendi Admin"
    - Add base URL: `http://localhost:3001/api`
 
 2. **Setup Authentication**
@@ -262,7 +262,7 @@ import api from './lib/api';
 
 // Login as admin
 await api.login({
-  email: 'admin@hennaharmony.com',
+  email: 'admin@mehendi.com',
   password: 'admin123'
 });
 
@@ -562,7 +562,7 @@ npm run seed
 # Via API
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@hennaharmony.com","password":"admin123"}'
+  -d '{"email":"admin@mehendi.com","password":"admin123"}'
 ```
 
 ### 3. Get Dashboard Stats
@@ -611,7 +611,7 @@ curl -X PATCH http://localhost:3001/api/admin/users/USER_ID/role \
    -- In production, update admin password
    UPDATE "User" 
    SET password = 'new_hashed_password' 
-   WHERE email = 'admin@hennaharmony.com';
+   WHERE email = 'admin@mehendi.com';
    ```
 
 2. **Use Environment Variables**
@@ -640,7 +640,7 @@ curl -X PATCH http://localhost:3001/api/admin/users/USER_ID/role \
 ## 🎯 Summary
 
 **Admin Access:**
-- Email: `admin@hennaharmony.com`
+- Email: `admin@mehendi.com`
 - Password: `admin123`
 
 **Admin Endpoints:**
@@ -653,7 +653,7 @@ curl -X PATCH http://localhost:3001/api/admin/users/USER_ID/role \
 # 1. Login
 TOKEN=$(curl -s -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@hennaharmony.com","password":"admin123"}' \
+  -d '{"email":"admin@mehendi.com","password":"admin123"}' \
   | jq -r '.token')
 
 # 2. Get stats

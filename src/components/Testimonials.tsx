@@ -6,7 +6,7 @@ const testimonials = [
     location: 'Mumbai, India',
     image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
     rating: 5,
-    text: 'I was skeptical about AI-generated designs, but Henna Harmony blew me away! The design perfectly matched my lehenga and the preview on my hand was so accurate. My wedding mehndi was exactly what I dreamed of.',
+    text: 'I was skeptical about AI-generated designs, but Mehendi blew me away! The design perfectly matched my lehenga and the preview on my hand was so accurate. My wedding mehendi was exactly what I dreamed of.',
     occasion: 'Wedding'
   },
   {
@@ -30,7 +30,7 @@ const testimonials = [
     location: 'London, UK',
     image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
     rating: 5,
-    text: 'Used Henna Harmony for my sister\'s sangeet. We generated designs for the whole bridal party! The ability to match designs to our outfits was a game-changer.',
+    text: 'Used Mehendi for my sister\'s sangeet. We generated designs for the whole bridal party! The ability to match designs to our outfits was a game-changer.',
     occasion: 'Sangeet'
   },
   {
@@ -75,8 +75,11 @@ const Testimonials: React.FC = () => {
               <div className="flex items-center gap-4 mb-6">
                 <img 
                   src={testimonials[activeIndex].image} 
-                  alt={testimonials[activeIndex].name}
+                  alt={`${testimonials[activeIndex].name} from ${testimonials[activeIndex].location}`}
                   className="w-16 h-16 rounded-full object-cover border-2 border-primary"
+                  loading="lazy"
+                  width={64}
+                  height={64}
                 />
                 <div>
                   <h4 className="font-bold text-lg text-text-primary-light dark:text-text-primary-dark">
@@ -137,8 +140,11 @@ const Testimonials: React.FC = () => {
               <div className="flex items-center gap-3">
                 <img 
                   src={t.image} 
-                  alt={t.name}
+                  alt={`${t.name} from ${t.location}`}
                   className="w-10 h-10 rounded-full object-cover"
+                  loading="lazy"
+                  width={40}
+                  height={40}
                 />
                 <div>
                   <p className="font-medium text-sm">{t.name}</p>

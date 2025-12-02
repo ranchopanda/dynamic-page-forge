@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../lib/api';
+import { supabaseApi } from '../lib/supabaseApi';
 
 interface SiteSettings {
   siteName: string;
@@ -22,8 +22,8 @@ interface SiteSettings {
 
 const AdminSettings: React.FC = () => {
   const [settings, setSettings] = useState<SiteSettings>({
-    siteName: 'Mehndi Design',
-    tagline: 'AI-Powered Custom Mehndi Design Generator',
+    siteName: 'Mehendi',
+    tagline: 'AI-Powered Custom Mehendi Design Generator',
     ownerName: 'Himanshi',
     email: 'himanshiparashar44@gmail.com',
     phone: '+91 7011489500',
@@ -36,7 +36,7 @@ const AdminSettings: React.FC = () => {
     pinterest: '',
     twitter: '',
     aboutText: '',
-    seoKeywords: 'mehndi design, henna artist Greater Noida, bridal mehndi, AI mehndi generator',
+    seoKeywords: 'mehendi design, henna artist Greater Noida, bridal mehendi, AI mehendi generator',
     googleAnalytics: '',
   });
   const [loading, setLoading] = useState(true);
@@ -49,9 +49,27 @@ const AdminSettings: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
-      const response = await api.get('/settings');
-      if (response.data) {
-        setSettings(response.data);
+      const data = await supabaseApi.getSettings();
+      if (data) {
+        // Map snake_case from Supabase to camelCase
+        setSettings({
+          siteName: data.site_name || '',
+          tagline: data.tagline || '',
+          ownerName: data.owner_name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          whatsapp: data.whatsapp || '',
+          address: data.address || '',
+          pricePerHand: data.price_per_hand || 100,
+          availableDays: data.available_days || '',
+          instagram: data.instagram || '',
+          facebook: data.facebook || '',
+          pinterest: data.pinterest || '',
+          twitter: data.twitter || '',
+          aboutText: data.about_text || '',
+          seoKeywords: data.seo_keywords || '',
+          googleAnalytics: data.google_analytics || '',
+        });
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -63,7 +81,25 @@ const AdminSettings: React.FC = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await api.put('/settings', settings);
+      // Convert camelCase to snake_case for Supabase
+      await supabaseApi.updateSettings({
+        site_name: settings.siteName,
+        tagline: settings.tagline,
+        owner_name: settings.ownerName,
+        email: settings.email,
+        phone: settings.phone,
+        whatsapp: settings.whatsapp,
+        address: settings.address,
+        price_per_hand: settings.pricePerHand,
+        available_days: settings.availableDays,
+        instagram: settings.instagram,
+        facebook: settings.facebook,
+        pinterest: settings.pinterest,
+        twitter: settings.twitter,
+        about_text: settings.aboutText,
+        seo_keywords: settings.seoKeywords,
+        google_analytics: settings.googleAnalytics,
+      } as any);
       setMessage('Settings saved successfully!');
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
@@ -270,7 +306,7 @@ const AdminSettings: React.FC = () => {
                 onChange={(e) => setSettings({ ...settings, seoKeywords: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg border border-primary/20 focus:border-primary"
                 rows={2}
-                placeholder="mehndi design, henna artist Greater Noida, bridal mehndi..."
+                placeholder="mehendi design, henna artist Greater Noida, bridal mehendi..."
               />
               <p className="text-xs text-gray-500 mt-1">Comma-separated keywords for search engines</p>
             </div>
@@ -313,18 +349,18 @@ const AdminSettings: React.FC = () => {
         <h4 className="font-bold text-green-800 dark:text-green-300 mb-3">🎯 Suggested SEO Keywords</h4>
         <div className="flex flex-wrap gap-2">
           {[
-            'mehndi design Greater Noida',
+            'mehendi design Greater Noida',
             'henna artist Noida',
-            'bridal mehndi Delhi NCR',
-            'wedding mehndi artist',
-            'AI mehndi generator',
-            'Arabic mehndi design',
+            'bridal mehendi Delhi NCR',
+            'wedding mehendi artist',
+            'AI mehendi generator',
+            'Arabic mehendi design',
             'Indian bridal henna',
-            'mehndi booking online',
-            'festive mehndi Noida',
-            'Karwa Chauth mehndi',
+            'mehendi booking online',
+            'festive mehendi Noida',
+            'Karwa Chauth mehendi',
             'Diwali henna design',
-            'mehndi artist near me',
+            'mehendi artist near me',
           ].map((keyword) => (
             <button
               key={keyword}

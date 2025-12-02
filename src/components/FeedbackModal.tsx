@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import api from '../lib/api';
+import { supabaseApi } from '../lib/supabaseApi';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -26,7 +26,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, designId
 
     setIsSubmitting(true);
     try {
-      await api.submitDesignFeedback(designId, { rating, feedback });
+      await supabaseApi.submitDesignFeedback(designId, { rating, feedback });
       setSubmitted(true);
       setTimeout(() => {
         onSubmit?.();

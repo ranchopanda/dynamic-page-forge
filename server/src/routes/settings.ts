@@ -1,24 +1,23 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { prisma } from '../lib/prisma.js';
+import { authenticate, requireRole } from '../middleware/auth.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Get site settings (public - for frontend)
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
-    let settings = await prisma.siteSettings.findUnique({
+    let settings = await (prisma as any).siteSettings.findUnique({
       where: { id: 'settings' },
     });
 
     // Create default settings if not exists
     if (!settings) {
-      settings = await prisma.siteSettings.create({
+      settings = await (prisma as any).siteSettings.create({
         data: {
           id: 'settings',
-          siteName: 'Mehndi Design',
-          tagline: 'AI-Powered Custom Mehndi Design Generator',
+          siteName: 'Mehendi Design',
+          tagline: 'AI-Powered Custom Mehendi Design Generator',
           ownerName: 'Himanshi',
           email: 'himanshiparashar44@gmail.com',
           phone: '+91 7011489500',
@@ -26,7 +25,6 @@ router.get('/', async (req: Request, res: Response) => {
           address: 'Greater Noida, Uttar Pradesh',
           pricePerHand: 100,
           availableDays: 'Sunday, Monday',
-          seoKeywords: 'mehndi design, henna artist Greater Noida, bridal mehndi, AI mehndi generator, mehndi artist Noida, wedding mehndi, festive henna',
         },
       });
     }
@@ -39,7 +37,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // Update site settings (admin only)
-router.put('/', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.put('/', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
   try {
     const {
       siteName,
@@ -60,7 +58,7 @@ router.put('/', authenticateToken, requireAdmin, async (req: Request, res: Respo
       googleAnalytics,
     } = req.body;
 
-    const settings = await prisma.siteSettings.upsert({
+    const settings = await (prisma as any).siteSettings.upsert({
       where: { id: 'settings' },
       update: {
         siteName,
@@ -82,8 +80,8 @@ router.put('/', authenticateToken, requireAdmin, async (req: Request, res: Respo
       },
       create: {
         id: 'settings',
-        siteName: siteName || 'Mehndi Design',
-        tagline: tagline || 'AI-Powered Custom Mehndi Design Generator',
+        siteName: siteName || 'Mehendi Design',
+        tagline: tagline || 'AI-Powered Custom Mehendi Design Generator',
         ownerName: ownerName || 'Himanshi',
         email: email || 'himanshiparashar44@gmail.com',
         phone: phone || '+91 7011489500',
@@ -91,7 +89,13 @@ router.put('/', authenticateToken, requireAdmin, async (req: Request, res: Respo
         address: address || 'Greater Noida, Uttar Pradesh',
         pricePerHand: pricePerHand || 100,
         availableDays: availableDays || 'Sunday, Monday',
-        seoKeywords: seoKeywords || 'mehndi design, henna artist Greater Noida',
+        instagram,
+        facebook,
+        pinterest,
+        twitter,
+        aboutText,
+        seoKeywords: seoKeywords || 'mehendi design, henna artist Greater Noida',
+        googleAnalytics,
       },
     });
 

@@ -1,6 +1,6 @@
 {
-  "name": "Henna Harmony him1",
-  "description": "AI-powered bespoke henna design studio. Upload your hand, analyze your style, and visualize exquisite mehndi designs.",
+  "name": "Mehendi",
+  "description": "AI-powered bespoke henna design studio. Upload your hand, analyze your style, and visualize exquisite mehendi designs.",
   "requestFramePermissions": [
     "camera"
   ]

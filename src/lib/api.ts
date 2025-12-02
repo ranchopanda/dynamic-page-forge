@@ -1,3 +1,5 @@
+import { safeStorage } from './storage';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 interface RequestOptions extends RequestInit {
@@ -7,26 +9,36 @@ interface RequestOptions extends RequestInit {
 class ApiClient {
   private baseUrl: string;
   private token: string | null = null;
+  private tokenInitialized = false;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
-    this.token = localStorage.getItem('auth_token');
+  }
+
+  private initToken() {
+    if (!this.tokenInitialized) {
+      this.token = safeStorage.getItem('auth_token');
+      this.tokenInitialized = true;
+    }
   }
 
   setToken(token: string | null) {
     this.token = token;
+    this.tokenInitialized = true;
     if (token) {
-      localStorage.setItem('auth_token', token);
+      safeStorage.setItem('auth_token', token);
     } else {
-      localStorage.removeItem('auth_token');
+      safeStorage.removeItem('auth_token');
     }
   }
 
   getToken() {
+    this.initToken();
     return this.token;
   }
 
   private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+    this.initToken(); // Ensure token is loaded before making requests
     const { token, ...fetchOptions } = options;
     const authToken = token || this.token;
 
@@ -39,6 +51,7 @@ class ApiClient {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...fetchOptions,
       headers,
+      credentials: 'include', // Include cookies in requests
     });
 
     if (!response.ok) {
@@ -86,7 +99,12 @@ class ApiClient {
     });
   }
 
-  logout() {
+  async logout() {
+    try {
+      await this.request('/auth/logout', { method: 'POST' });
+    } catch (error) {
+      // Ignore errors on logout
+    }
     this.setToken(null);
   }
 

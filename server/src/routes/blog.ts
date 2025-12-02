@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { prisma } from '../lib/prisma.js';
+import { authenticate, requireRole } from '../middleware/auth.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Helper to generate slug
 const generateSlug = (title: string): string => {
@@ -13,10 +12,10 @@ const generateSlug = (title: string): string => {
     .replace(/(^-|-$)/g, '');
 };
 
-// Get all published blog posts (public) - respects scheduled date
-router.get('/', async (req: Request, res: Response) => {
+// Get all published blog posts (public)
+router.get('/', async (_req: Request, res: Response) => {
   try {
-    const { category, tag, featured, limit = '10', page = '1' } = req.query;
+    const { category, tag, featured, limit = '10', page = '1' } = _req.query;
     const now = new Date();
     
     const where: any = { 
@@ -30,14 +29,14 @@ router.get('/', async (req: Request, res: Response) => {
     if (featured === 'true') where.isFeatured = true;
     if (tag) where.tags = { contains: tag as string };
 
-    const posts = await prisma.blogPost.findMany({
+    const posts = await (prisma as any).blogPost.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       take: parseInt(limit as string),
       skip: (parseInt(page as string) - 1) * parseInt(limit as string),
     });
 
-    const total = await prisma.blogPost.count({ where });
+    const total = await (prisma as any).blogPost.count({ where });
 
     res.json({
       posts,
@@ -59,16 +58,17 @@ router.get('/post/:slug', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
     
-    const post = await prisma.blogPost.findUnique({
+    const post = await (prisma as any).blogPost.findUnique({
       where: { slug },
     });
 
     if (!post || !post.isPublished) {
-      return res.status(404).json({ error: 'Post not found' });
+      res.status(404).json({ error: 'Post not found' });
+      return;
     }
 
     // Increment views
-    await prisma.blogPost.update({
+    await (prisma as any).blogPost.update({
       where: { slug },
       data: { views: { increment: 1 } },
     });
@@ -81,14 +81,14 @@ router.get('/post/:slug', async (req: Request, res: Response) => {
 });
 
 // Get categories (public)
-router.get('/categories', async (req: Request, res: Response) => {
+router.get('/categories', async (_req: Request, res: Response) => {
   try {
-    const posts = await prisma.blogPost.findMany({
+    const posts = await (prisma as any).blogPost.findMany({
       where: { isPublished: true },
       select: { category: true },
     });
 
-    const categories = [...new Set(posts.map(p => p.category))];
+    const categories = [...new Set(posts.map((p: any) => p.category))];
     res.json(categories);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch categories' });
@@ -98,9 +98,9 @@ router.get('/categories', async (req: Request, res: Response) => {
 // ============ ADMIN ROUTES ============
 
 // Get all posts (admin - includes drafts)
-router.get('/admin/all', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/all', authenticate, requireRole('ADMIN'), async (_req: Request, res: Response) => {
   try {
-    const posts = await prisma.blogPost.findMany({
+    const posts = await (prisma as any).blogPost.findMany({
       orderBy: { createdAt: 'desc' },
     });
     res.json(posts);
@@ -110,23 +110,24 @@ router.get('/admin/all', authenticateToken, requireAdmin, async (req: Request, r
 });
 
 // Create blog post (admin)
-router.post('/admin', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.post('/admin', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
   try {
     const { title, excerpt, content, coverImage, category, tags, isPublished, isFeatured, metaTitle, metaDescription, keywords } = req.body;
 
     if (!title || !excerpt || !content) {
-      return res.status(400).json({ error: 'Title, excerpt, and content are required' });
+      res.status(400).json({ error: 'Title, excerpt, and content are required' });
+      return;
     }
 
     let slug = generateSlug(title);
     
     // Check if slug exists
-    const existing = await prisma.blogPost.findUnique({ where: { slug } });
+    const existing = await (prisma as any).blogPost.findUnique({ where: { slug } });
     if (existing) {
       slug = `${slug}-${Date.now()}`;
     }
 
-    const post = await prisma.blogPost.create({
+    const post = await (prisma as any).blogPost.create({
       data: {
         title,
         slug,
@@ -151,12 +152,12 @@ router.post('/admin', authenticateToken, requireAdmin, async (req: Request, res:
 });
 
 // Update blog post (admin)
-router.put('/admin/:id', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.put('/admin/:id', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { title, excerpt, content, coverImage, category, tags, isPublished, isFeatured, metaTitle, metaDescription, keywords } = req.body;
 
-    const post = await prisma.blogPost.update({
+    const post = await (prisma as any).blogPost.update({
       where: { id },
       data: {
         title,
@@ -181,10 +182,10 @@ router.put('/admin/:id', authenticateToken, requireAdmin, async (req: Request, r
 });
 
 // Delete blog post (admin)
-router.delete('/admin/:id', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.delete('/admin/:id', authenticate, requireRole('ADMIN'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await prisma.blogPost.delete({ where: { id } });
+    await (prisma as any).blogPost.delete({ where: { id } });
     res.json({ message: 'Post deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete blog post' });

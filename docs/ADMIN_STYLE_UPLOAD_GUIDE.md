@@ -2,14 +2,14 @@
 
 ## ✅ Feature Implemented!
 
-Admins can now upload stock mehndi photos that will be used as templates to apply onto users' hands using AI.
+Admins can now upload stock mehendi photos that will be used as templates to apply onto users' hands using AI.
 
 ---
 
 ## 🚀 How It Works
 
 ### Admin Side:
-1. Admin uploads a clear photo of a mehndi design
+1. Admin uploads a clear photo of a mehendi design
 2. Adds details (name, description, category, etc.)
 3. Provides AI prompt modifiers for accurate pattern matching
 4. Style becomes available in the user's style selection
@@ -17,7 +17,7 @@ Admins can now upload stock mehndi photos that will be used as templates to appl
 ### User Side:
 1. User uploads their hand photo
 2. Selects a style from the library
-3. AI analyzes the stock mehndi photo
+3. AI analyzes the stock mehendi photo
 4. AI applies that exact pattern onto the user's hand
 5. User gets a preview of how it will look on their hand
 
@@ -27,18 +27,18 @@ Admins can now upload stock mehndi photos that will be used as templates to appl
 
 ### Step 1: Login as Admin
 ```
-Email: admin@hennaharmony.com
+Email: admin@mehendi.com
 Password: admin123
 ```
 
 ### Step 2: Go to Admin Dashboard
 Click the "Admin" link in the header (🛡️ icon)
 
-### Step 3: Click "🎨 Mehndi Styles" Tab
+### Step 3: Click "🎨 Mehendi Styles" Tab
 You'll see three tabs:
 - Dashboard
 - Users
-- **🎨 Mehndi Styles** ← Click this
+- **🎨 Mehendi Styles** ← Click this
 
 ---
 
@@ -47,14 +47,14 @@ You'll see three tabs:
 ### 1. Click "Add New Style" Button
 Located in the top-right corner
 
-### 2. Upload Stock Mehndi Photo
+### 2. Upload Stock Mehendi Photo
 - Click "Choose File"
-- Select a clear, high-quality photo of mehndi design
+- Select a clear, high-quality photo of mehendi design
 - **Important**: This photo will be used as the template
 - Best results with:
   - Clear, well-lit photos
   - Full hand visible
-  - High contrast between mehndi and skin
+  - High contrast between mehendi and skin
   - Minimal background
 
 ### 3. Fill in Details
@@ -65,7 +65,7 @@ Example: "Royal Mandala", "Delicate Flora", "Arabic Bridal"
 #### Description
 Describe the style for users:
 ```
-"Intricate floral and paisley mehndi design suitable for grand occasions"
+"Intricate floral and paisley mehendi design suitable for grand occasions"
 ```
 
 #### AI Prompt Modifier
@@ -137,25 +137,25 @@ The grid shows all uploaded styles with:
 ### The Process:
 
 1. **Admin uploads stock photo**
-   - Example: A photo of intricate mandala mehndi on a hand
+   - Example: A photo of intricate mandala mehendi on a hand
 
 2. **User selects this style**
    - User sees the stock photo as a preview
    - User clicks "Preview on My Hand"
 
 3. **AI analyzes both images**
-   - Extracts the mehndi pattern from stock photo
+   - Extracts the mehendi pattern from stock photo
    - Analyzes user's hand shape and size
    - Uses the prompt modifier for context
 
 4. **AI applies pattern**
-   - Maps the mehndi pattern onto user's hand
+   - Maps the mehendi pattern onto user's hand
    - Adjusts for hand size and shape
    - Maintains the style and detail level
    - Generates realistic preview
 
 5. **User sees result**
-   - Their hand with the mehndi pattern applied
+   - Their hand with the mehendi pattern applied
    - Can save, share, or book consultation
 
 ---
@@ -190,7 +190,7 @@ The grid shows all uploaded styles with:
 ❌ **Poor Examples:**
 ```
 "nice design" (too vague)
-"mehndi" (not descriptive enough)
+"mehendi" (not descriptive enough)
 "beautiful pattern on hand" (not specific)
 ```
 
@@ -203,7 +203,7 @@ The grid shows all uploaded styles with:
 
 ❌ **Poor:**
 ```
-"Nice design" or "Mehndi pattern"
+"Nice design" or "Mehendi pattern"
 ```
 
 ---
@@ -279,7 +279,7 @@ HennaStyle {
 ### Complete Example:
 
 **1. Admin uploads stock photo:**
-- Photo: Beautiful mandala mehndi on a hand
+- Photo: Beautiful mandala mehendi on a hand
 - Name: "Royal Mandala"
 - Description: "A grand, symmetrical mandala centerpiece for a majestic look"
 - Prompt: "royal mandala style, grand mandala design, center hand, symmetrical, circular patterns, detailed petals"
@@ -356,7 +356,7 @@ Body: FormData with image file
 ## ✅ Summary
 
 **What You Can Do:**
-- ✅ Upload stock mehndi photos
+- ✅ Upload stock mehendi photos
 - ✅ Manage style library
 - ✅ Categorize and organize styles
 - ✅ Control which styles are visible
@@ -371,8 +371,8 @@ Body: FormData with image file
 - ✅ Book consultations
 
 **The Result:**
-A powerful, AI-driven mehndi design system where admins curate the library and users get personalized previews! 🎨✨
+A powerful, AI-driven mehendi design system where admins curate the library and users get personalized previews! 🎨✨
 
 ---
 
-**Ready to start uploading styles? Login as admin and click the "🎨 Mehndi Styles" tab!**
+**Ready to start uploading styles? Login as admin and click the "🎨 Mehendi Styles" tab!**

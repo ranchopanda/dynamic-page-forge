@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5f0e8"/>
+      <stop offset="100%" stop-color="#ebe4d8"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c4a574"/>
+      <stop offset="100%" stop-color="#a08050"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="20" fill="url(#bg)"/>
+  <!-- Stylized M with curves like the logo -->
+  <path d="M20 75 Q28 30 38 25 Q48 40 50 20 Q52 40 62 25 Q72 30 80 75" 
+        stroke="url(#gold)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Inner curves -->
+  <path d="M38 25 Q43 45 48 50 Q50 35 50 20" 
+        stroke="url(#gold)" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M50 20 Q50 35 52 50 Q57 45 62 25" 
+        stroke="url(#gold)" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Left lotus petals -->
+  <ellipse cx="18" cy="55" rx="5" ry="10" transform="rotate(-25 18 55)" fill="url(#gold)" opacity="0.9"/>
+  <ellipse cx="14" cy="60" rx="4" ry="8" transform="rotate(-45 14 60)" fill="url(#gold)" opacity="0.8"/>
+  <!-- Right lotus petals -->
+  <ellipse cx="82" cy="55" rx="5" ry="10" transform="rotate(25 82 55)" fill="url(#gold)" opacity="0.9"/>
+  <ellipse cx="86" cy="60" rx="4" ry="8" transform="rotate(45 86 60)" fill="url(#gold)" opacity="0.8"/>
+</svg>

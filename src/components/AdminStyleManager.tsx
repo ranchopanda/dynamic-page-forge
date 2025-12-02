@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../lib/api';
+import { supabaseApi } from '../lib/supabaseApi';
 
 interface Style {
   id: string;
@@ -40,7 +40,7 @@ const AdminStyleManager: React.FC = () => {
   const loadStyles = async () => {
     setLoading(true);
     try {
-      const data = await api.getAdminStyles();
+      const data = await supabaseApi.getAdminStyles();
       setStyles(data);
     } catch (error) {
       console.error('Failed to load styles:', error);
@@ -74,9 +74,9 @@ const AdminStyleManager: React.FC = () => {
     
     try {
       if (editingStyle) {
-        await api.updateStyle(editingStyle.id, formData);
+        await supabaseApi.updateStyle(editingStyle.id, formData);
       } else {
-        await api.createStyle(formData);
+        await supabaseApi.createStyle(formData);
       }
       
       setShowAddModal(false);
@@ -107,7 +107,7 @@ const AdminStyleManager: React.FC = () => {
     if (!confirm('Are you sure you want to delete this style?')) return;
     
     try {
-      await api.deleteStyle(styleId);
+      await supabaseApi.deleteStyle(styleId);
       loadStyles();
     } catch (error) {
       console.error('Failed to delete style:', error);
@@ -117,7 +117,7 @@ const AdminStyleManager: React.FC = () => {
 
   const toggleActive = async (style: Style) => {
     try {
-      await api.updateStyle(style.id, { isActive: !style.isActive });
+      await supabaseApi.updateStyle(style.id, { isActive: !style.isActive });
       loadStyles();
     } catch (error) {
       console.error('Failed to toggle style:', error);
@@ -149,9 +149,9 @@ const AdminStyleManager: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-primary">Mehndi Style Library</h2>
+          <h2 className="text-2xl font-bold text-primary">Mehendi Style Library</h2>
           <p className="text-sm text-text-primary-light/70">
-            Upload and manage stock mehndi photos that users can apply to their hands
+            Upload and manage stock mehendi photos that users can apply to their hands
           </p>
         </div>
         <button
@@ -243,7 +243,7 @@ const AdminStyleManager: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Image Upload */}
               <div>
-                <label className="block text-sm font-medium mb-2">Stock Mehndi Photo</label>
+                <label className="block text-sm font-medium mb-2">Stock Mehendi Photo</label>
                 <div className="border-2 border-dashed border-primary/20 rounded-xl p-6 text-center">
                   {formData.imageUrl ? (
                     <div className="relative">
@@ -259,7 +259,7 @@ const AdminStyleManager: React.FC = () => {
                   ) : (
                     <div>
                       <span className="material-symbols-outlined text-4xl text-primary/50 mb-2">upload_file</span>
-                      <p className="text-sm text-text-primary-light/70 mb-2">Upload a clear photo of mehndi design</p>
+                      <p className="text-sm text-text-primary-light/70 mb-2">Upload a clear photo of mehendi design</p>
                       <input
                         type="file"
                         accept="image/*"

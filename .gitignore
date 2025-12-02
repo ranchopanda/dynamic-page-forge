@@ -19,6 +19,8 @@ server/dist
 # Environment files
 *.local
 .env
+.env.production
+.env.*.local
 server/.env
 
 # Uploads

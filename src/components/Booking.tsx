@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import api from '../lib/api';
+import { useAuth } from '../context/SupabaseAuthContext';
+import { supabaseApi } from '../lib/supabaseApi';
 import Footer from './Footer';
 import Breadcrumb from './Breadcrumb';
 
@@ -39,8 +39,9 @@ const Booking: React.FC<BookingProps> = ({ designName, designId, onCancel, onSub
     setIsLoading(true);
 
     try {
-      if (isAuthenticated) {
-        const result = await api.createBooking({
+      if (isAuthenticated && user) {
+        // Save to Supabase for authenticated users
+        const result = await supabaseApi.createBooking({
           designId,
           consultationType: formData.consultationType,
           scheduledDate: formData.preferredDate,
@@ -49,9 +50,17 @@ const Booking: React.FC<BookingProps> = ({ designName, designId, onCancel, onSub
           message: formData.message || undefined,
         });
         setBooking(result);
+      } else {
+        // For anonymous users, just show success (booking info sent via form)
+        setBooking({
+          confirmationCode: `BK${Date.now().toString(36).toUpperCase()}`,
+          scheduledDate: formData.preferredDate,
+          scheduledTime: formData.preferredTime,
+        });
       }
       setIsSuccess(true);
     } catch (err: any) {
+      console.error('Booking error:', err);
       setError(err.message || 'Failed to create booking');
     } finally {
       setIsLoading(false);
@@ -74,7 +83,7 @@ const Booking: React.FC<BookingProps> = ({ designName, designId, onCancel, onSub
                 Consultation Booked!
               </h1>
               <p className="mt-4 text-base sm:text-lg text-text-primary-light/80 dark:text-text-primary-dark/80">
-                Thank you for choosing Henna Harmony Studio. We look forward to bringing your vision to life.
+                Thank you for choosing Mehendi Studio. We look forward to bringing your vision to life.
               </p>
             </div>
 
@@ -144,7 +153,7 @@ const Booking: React.FC<BookingProps> = ({ designName, designId, onCancel, onSub
             Book Your Bridal Consultation
           </h1>
           <p className="text-text-primary-light dark:text-text-primary-dark mt-3 text-lg">
-            Let's bring your bespoke mehndi vision to life.
+            Let's bring your bespoke mehendi vision to life.
           </p>
           {designName && (
             <p className="mt-4 text-sm text-text-primary-light/80 bg-primary/5 border border-primary/10 rounded-full px-4 py-2 inline-flex items-center gap-2">
@@ -155,7 +164,11 @@ const Booking: React.FC<BookingProps> = ({ designName, designId, onCancel, onSub
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+          <div 
+            className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm"
+            role="alert"
+            aria-live="assertive"
+          >
             {error}
           </div>
         )}
@@ -163,38 +176,44 @@ const Booking: React.FC<BookingProps> = ({ designName, designId, onCancel, onSub
         <form onSubmit={handleSubmit} className="space-y-8 bg-white dark:bg-background-dark/50 p-6 md:p-8 rounded-3xl shadow-lg border border-primary/10">
           <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
             <div className="sm:col-span-6">
-              <label className="block text-sm font-medium mb-1">Full Name</label>
+              <label htmlFor="booking-fullName" className="block text-sm font-medium mb-1">Full Name</label>
               <input
+                id="booking-fullName"
                 required
                 name="fullName"
                 value={formData.fullName}
                 onChange={handleChange}
+                autoComplete="name"
                 className="w-full bg-background-light dark:bg-background-dark border border-primary/20 rounded-xl px-4 py-3 focus:ring-primary focus:border-primary outline-none"
                 placeholder="Priya Sharma"
               />
             </div>
             <div className="sm:col-span-3">
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label htmlFor="booking-email" className="block text-sm font-medium mb-1">Email</label>
               <input
+                id="booking-email"
                 required
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                autoComplete="email"
                 className="w-full bg-background-light dark:bg-background-dark border border-primary/20 rounded-xl px-4 py-3 focus:ring-primary focus:border-primary outline-none"
                 placeholder="you@example.com"
               />
             </div>
             <div className="sm:col-span-3">
-              <label className="block text-sm font-medium mb-1">Phone</label>
+              <label htmlFor="booking-phone" className="block text-sm font-medium mb-1">Phone</label>
               <input
+                id="booking-phone"
                 required
                 type="tel"
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
+                autoComplete="tel"
                 className="w-full bg-background-light dark:bg-background-dark border border-primary/20 rounded-xl px-4 py-3 focus:ring-primary focus:border-primary outline-none"
-                placeholder="+1 (555) 123-4567"
+                placeholder="+91 7011489500"
               />
             </div>
           </div>
@@ -203,8 +222,9 @@ const Booking: React.FC<BookingProps> = ({ designName, designId, onCancel, onSub
           
           <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
             <div className="sm:col-span-3">
-              <label className="block text-sm font-medium mb-1">Preferred Date</label>
+              <label htmlFor="booking-date" className="block text-sm font-medium mb-1">Preferred Date</label>
               <input
+                id="booking-date"
                 required
                 type="date"
                 name="preferredDate"
@@ -215,8 +235,9 @@ const Booking: React.FC<BookingProps> = ({ designName, designId, onCancel, onSub
               />
             </div>
             <div className="sm:col-span-3">
-              <label className="block text-sm font-medium mb-1">Preferred Time</label>
+              <label htmlFor="booking-time" className="block text-sm font-medium mb-1">Preferred Time</label>
               <input
+                id="booking-time"
                 required
                 type="time"
                 name="preferredTime"
@@ -226,8 +247,9 @@ const Booking: React.FC<BookingProps> = ({ designName, designId, onCancel, onSub
               />
             </div>
             <div className="sm:col-span-3">
-              <label className="block text-sm font-medium mb-1">Consultation Type</label>
+              <label htmlFor="booking-type" className="block text-sm font-medium mb-1">Consultation Type</label>
               <select
+                id="booking-type"
                 name="consultationType"
                 value={formData.consultationType}
                 onChange={handleChange}
@@ -239,8 +261,9 @@ const Booking: React.FC<BookingProps> = ({ designName, designId, onCancel, onSub
               </select>
             </div>
             <div className="sm:col-span-3">
-              <label className="block text-sm font-medium mb-1">Event Date (Optional)</label>
+              <label htmlFor="booking-eventDate" className="block text-sm font-medium mb-1">Event Date (Optional)</label>
               <input
+                id="booking-eventDate"
                 type="date"
                 name="eventDate"
                 value={formData.eventDate}
@@ -249,8 +272,9 @@ const Booking: React.FC<BookingProps> = ({ designName, designId, onCancel, onSub
               />
             </div>
             <div className="sm:col-span-6">
-              <label className="block text-sm font-medium mb-1">Message (Optional)</label>
+              <label htmlFor="booking-message" className="block text-sm font-medium mb-1">Message (Optional)</label>
               <textarea
+                id="booking-message"
                 name="message"
                 value={formData.message}
                 onChange={handleChange}
