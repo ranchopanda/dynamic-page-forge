@@ -4,14 +4,15 @@ import { useAuth } from '../context/SupabaseAuthContext';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialMode?: 'login' | 'register';
+  initialMode?: 'login' | 'register' | 'forgot';
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'login' }) => {
-  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, register } = useAuth();
+  const [success, setSuccess] = useState('');
+  const { login, register, resetPassword } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -25,22 +26,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setIsLoading(true);
 
     try {
-      if (mode === 'login') {
-        console.log('Attempting login...');
+      if (mode === 'forgot') {
+        await resetPassword(formData.email);
+        setSuccess('Password reset email sent! Check your inbox.');
+        setIsLoading(false);
+        return;
+      } else if (mode === 'login') {
         await login(formData.email, formData.password);
-        console.log('Login successful, closing modal...');
       } else {
-        console.log('Attempting registration...');
         await register({
           email: formData.email,
           password: formData.password,
           name: formData.name,
           phone: formData.phone || undefined,
         });
-        console.log('Registration successful, closing modal...');
       }
       setIsLoading(false);
       onClose();
@@ -70,12 +73,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
         <div className="p-8">
           <div className="text-center mb-8">
             <h2 className="font-headline text-3xl font-bold text-primary">
-              {mode === 'login' ? 'Welcome Back' : 'Join Mehendi'}
+              {mode === 'login' ? 'Welcome Back' : mode === 'register' ? 'Join Mehendi' : 'Reset Password'}
             </h2>
             <p className="mt-2 text-text-primary-light/70 dark:text-text-primary-dark/70">
               {mode === 'login' 
                 ? 'Admin access only - Regular users can use all features without login' 
-                : 'Create an admin account'}
+                : mode === 'register'
+                ? 'Create an admin account'
+                : 'Enter your email to receive a reset link'}
             </p>
           </div>
 
@@ -86,6 +91,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
               aria-live="assertive"
             >
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div 
+              className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm"
+              role="alert"
+              aria-live="polite"
+            >
+              {success}
             </div>
           )}
 
@@ -122,21 +137,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
               />
             </div>
 
-            <div>
-              <label htmlFor="auth-password" className="block text-sm font-medium mb-1">Password</label>
-              <input
-                id="auth-password"
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                minLength={8}
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                placeholder="••••••••"
-              />
-            </div>
+            {mode !== 'forgot' && (
+              <div>
+                <label htmlFor="auth-password" className="block text-sm font-medium mb-1">Password</label>
+                <input
+                  id="auth-password"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  minLength={8}
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
 
             {mode === 'register' && (
               <div>
@@ -154,9 +171,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
               </div>
             )}
 
+            {mode === 'login' && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => { setMode('forgot'); setError(''); setSuccess(''); }}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !!success}
               className="w-full py-3 rounded-full bg-primary text-white font-bold shadow-primary-soft hover:bg-[#a15842] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
@@ -166,22 +195,36 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
                 </>
               ) : mode === 'login' ? (
                 'Admin Sign In'
-              ) : (
+              ) : mode === 'register' ? (
                 'Create Admin Account'
+              ) : (
+                'Send Reset Link'
               )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-text-primary-light/70 dark:text-text-primary-dark/70">
-              {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-              <button
-                onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-                className="text-primary font-semibold hover:underline"
-              >
-                {mode === 'login' ? 'Sign up' : 'Sign in'}
-              </button>
-            </p>
+          <div className="mt-6 text-center space-y-2">
+            {mode === 'forgot' ? (
+              <p className="text-sm text-text-primary-light/70 dark:text-text-primary-dark/70">
+                Remember your password?{' '}
+                <button
+                  onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
+                  className="text-primary font-semibold hover:underline"
+                >
+                  Back to Sign in
+                </button>
+              </p>
+            ) : (
+              <p className="text-sm text-text-primary-light/70 dark:text-text-primary-dark/70">
+                {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+                <button
+                  onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setSuccess(''); }}
+                  className="text-primary font-semibold hover:underline"
+                >
+                  {mode === 'login' ? 'Sign up' : 'Sign in'}
+                </button>
+              </p>
+            )}
           </div>
         </div>
       </div>

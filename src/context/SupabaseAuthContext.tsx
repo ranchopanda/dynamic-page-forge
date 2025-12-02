@@ -22,6 +22,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateProfile: (data: { name?: string; phone?: string; avatar?: string }) => Promise<void>;
   refreshUser: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -292,6 +294,22 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setUser(prev => prev ? { ...prev, ...updated } : null);
   };
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    
+    if (error) throw new Error(error.message);
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    
+    if (error) throw new Error(error.message);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -305,6 +323,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         logout,
         updateProfile,
         refreshUser,
+        resetPassword,
+        updatePassword,
       }}
     >
       {children}

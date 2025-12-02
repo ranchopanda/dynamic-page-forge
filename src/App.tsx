@@ -26,6 +26,7 @@ const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const Blog = lazy(() => import('./components/Blog'));
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./components/TermsOfService'));
+const ResetPassword = lazy(() => import('./components/ResetPassword'));
 
 // Only import DebugAuth in development
 const DebugAuth = import.meta.env.DEV 
@@ -356,6 +357,12 @@ const AppRoutes: React.FC = () => {
                 <Route path="/terms" element={
                   <main id="main-content">
                     <TermsOfService onBack={() => navigate('/')} />
+                  </main>
+                } />
+                
+                <Route path="/reset-password" element={
+                  <main id="main-content">
+                    <ResetPassword />
                   </main>
                 } />
                 

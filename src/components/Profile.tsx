@@ -18,13 +18,17 @@ interface ProfileProps {
 }
 
 const Profile: React.FC<ProfileProps> = ({ onBack, onViewDesign, onStartDesign, onGallery, onArtists, onSaved, onBooking, onAuth, onAdmin }) => {
-  const { user, updateProfile, logout } = useAuth();
+  const { user, updateProfile, logout, updatePassword } = useAuth();
   const [activeTab, setActiveTab] = useState<'designs' | 'bookings' | 'settings'>('designs');
   const [designs, setDesigns] = useState<Design[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', phone: '' });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   useEffect(() => {
     loadData();
@@ -58,6 +62,33 @@ const Profile: React.FC<ProfileProps> = ({ onBack, onViewDesign, onStartDesign, 
       setIsEditing(false);
     } catch (error) {
       console.error('Failed to update profile:', error);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return;
+    }
+
+    try {
+      await updatePassword(passwordForm.newPassword);
+      setPasswordSuccess('Password updated successfully!');
+      setPasswordForm({ newPassword: '', confirmPassword: '' });
+      setTimeout(() => {
+        setIsChangingPassword(false);
+        setPasswordSuccess('');
+      }, 2000);
+    } catch (error: any) {
+      setPasswordError(error.message || 'Failed to update password');
     }
   };
 
@@ -301,66 +332,142 @@ const Profile: React.FC<ProfileProps> = ({ onBack, onViewDesign, onStartDesign, 
             )}
 
             {activeTab === 'settings' && (
-              <div className="bg-white dark:bg-background-dark/50 rounded-2xl p-8 shadow-md border border-primary/10">
-                <h3 className="font-headline text-xl font-bold mb-6">Profile Settings</h3>
-                
-                {isEditing ? (
-                  <div className="space-y-4 max-w-md">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Name</label>
-                      <input
-                        type="text"
-                        value={editForm.name}
-                        onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                        className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark"
-                      />
+              <div className="space-y-6">
+                {/* Profile Settings */}
+                <div className="bg-white dark:bg-background-dark/50 rounded-2xl p-8 shadow-md border border-primary/10">
+                  <h3 className="font-headline text-xl font-bold mb-6">Profile Settings</h3>
+                  
+                  {isEditing ? (
+                    <div className="space-y-4 max-w-md">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Name</label>
+                        <input
+                          type="text"
+                          value={editForm.name}
+                          onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                          className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Phone</label>
+                        <input
+                          type="tel"
+                          value={editForm.phone}
+                          onChange={e => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                          className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark"
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleSaveProfile}
+                          className="px-6 py-2 bg-primary text-white rounded-full hover:bg-[#a15842] transition-colors"
+                        >
+                          Save Changes
+                        </button>
+                        <button
+                          onClick={() => setIsEditing(false)}
+                          className="px-6 py-2 border border-primary/20 rounded-full hover:bg-primary/5 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Phone</label>
-                      <input
-                        type="tel"
-                        value={editForm.phone}
-                        onChange={e => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
-                        className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark"
-                      />
-                    </div>
-                    <div className="flex gap-3">
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center py-3 border-b border-primary/10">
+                        <span className="text-text-primary-light/70">Name</span>
+                        <span className="font-medium">{user.name}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-3 border-b border-primary/10">
+                        <span className="text-text-primary-light/70">Email</span>
+                        <span className="font-medium">{user.email}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-3 border-b border-primary/10">
+                        <span className="text-text-primary-light/70">Phone</span>
+                        <span className="font-medium">{user.phone || 'Not set'}</span>
+                      </div>
                       <button
-                        onClick={handleSaveProfile}
-                        className="px-6 py-2 bg-primary text-white rounded-full hover:bg-[#a15842] transition-colors"
+                        onClick={() => setIsEditing(true)}
+                        className="mt-4 px-6 py-2 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors"
                       >
-                        Save Changes
+                        Edit Profile
                       </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Change Password */}
+                <div className="bg-white dark:bg-background-dark/50 rounded-2xl p-8 shadow-md border border-primary/10">
+                  <h3 className="font-headline text-xl font-bold mb-6">Change Password</h3>
+                  
+                  {isChangingPassword ? (
+                    <div className="space-y-4 max-w-md">
+                      {passwordError && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                          {passwordError}
+                        </div>
+                      )}
+                      {passwordSuccess && (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm">
+                          {passwordSuccess}
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">New Password</label>
+                        <input
+                          type="password"
+                          value={passwordForm.newPassword}
+                          onChange={e => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                          className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark"
+                          placeholder="••••••••"
+                          minLength={8}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Confirm New Password</label>
+                        <input
+                          type="password"
+                          value={passwordForm.confirmPassword}
+                          onChange={e => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                          className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-background-light dark:bg-background-dark"
+                          placeholder="••••••••"
+                          minLength={8}
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleChangePassword}
+                          className="px-6 py-2 bg-primary text-white rounded-full hover:bg-[#a15842] transition-colors"
+                        >
+                          Update Password
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsChangingPassword(false);
+                            setPasswordForm({ newPassword: '', confirmPassword: '' });
+                            setPasswordError('');
+                          }}
+                          className="px-6 py-2 border border-primary/20 rounded-full hover:bg-primary/5 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-text-primary-light/70 mb-4">
+                        Update your password to keep your account secure.
+                      </p>
                       <button
-                        onClick={() => setIsEditing(false)}
-                        className="px-6 py-2 border border-primary/20 rounded-full hover:bg-primary/5 transition-colors"
+                        onClick={() => setIsChangingPassword(true)}
+                        className="px-6 py-2 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors flex items-center gap-2"
                       >
-                        Cancel
+                        <span className="material-symbols-outlined text-lg">lock</span>
+                        Change Password
                       </button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center py-3 border-b border-primary/10">
-                      <span className="text-text-primary-light/70">Name</span>
-                      <span className="font-medium">{user.name}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-3 border-b border-primary/10">
-                      <span className="text-text-primary-light/70">Email</span>
-                      <span className="font-medium">{user.email}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-3 border-b border-primary/10">
-                      <span className="text-text-primary-light/70">Phone</span>
-                      <span className="font-medium">{user.phone || 'Not set'}</span>
-                    </div>
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="mt-4 px-6 py-2 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors"
-                    >
-                      Edit Profile
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </>
