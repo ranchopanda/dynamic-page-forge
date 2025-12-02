@@ -1,25 +1,44 @@
 import { HandAnalysis, OutfitAnalysis } from "../types";
 
-// API base URL from environment
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// Use Gemini API directly from frontend
+const GEMINI_API_KEY = 'AIzaSyBmE26lEC7izfY_ERA1wBXpxBVKUFwF7pQ';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
-// Helper to make authenticated API calls
-const apiCall = async <T>(endpoint: string, body: object): Promise<T> => {
-  const response = await fetch(`${API_URL}${endpoint}`, {
+// Helper to call Gemini API directly
+const callGemini = async (prompt: string, image?: string): Promise<string> => {
+  const parts: any[] = [{ text: prompt }];
+  
+  if (image) {
+    // Remove data URL prefix if present
+    const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+    parts.push({
+      inline_data: {
+        mime_type: 'image/jpeg',
+        data: base64Data
+      }
+    });
+  }
+
+  const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include', // Include cookies for auth
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      contents: [{ parts }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 2048,
+      }
+    }),
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || `API error: ${response.status}`);
+    throw new Error(`Gemini API error: ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  return data.candidates[0].content.parts[0].text;
 };
 
 export const analyzeHandImage = async (base64Image: string): Promise<HandAnalysis> => {
@@ -34,12 +53,25 @@ export const analyzeHandImage = async (base64Image: string): Promise<HandAnalysi
   };
 
   try {
-    return await apiCall<HandAnalysis>('/ai/analyze-hand', { image: base64Image });
+    const prompt = `Analyze this hand image for henna/mehendi design. Return ONLY valid JSON with this structure:
+{
+  "skinTone": "description",
+  "handShape": "description",
+  "coverage": "description",
+  "keyFeature": "description",
+  "fingerShape": "description",
+  "wristArea": "description",
+  "recommendedStyles": ["style1", "style2"]
+}`;
+
+    const result = await callGemini(prompt, base64Image);
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    return fallbackAnalysis;
   } catch (error: any) {
     console.error("Analysis failed", error);
-    if (error?.message?.includes('429') || error?.message?.includes('Rate limited')) {
-      throw new Error("Rate limited. Please wait a moment and try again.");
-    }
     return fallbackAnalysis;
   }
 };
@@ -53,7 +85,19 @@ export const analyzeOutfitImage = async (base64Image: string): Promise<OutfitAna
   };
 
   try {
-    return await apiCall<OutfitAnalysis>('/ai/analyze-outfit', { image: base64Image });
+    const prompt = `Analyze this outfit image. Return ONLY valid JSON:
+{
+  "outfitType": "description",
+  "dominantColors": ["#hex1", "#hex2"],
+  "styleKeywords": ["keyword1", "keyword2"]
+}`;
+
+    const result = await callGemini(prompt, base64Image);
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    return fallbackAnalysis;
   } catch (error) {
     console.error("Outfit analysis failed", error);
     return fallbackAnalysis;
@@ -81,15 +125,8 @@ export const generateHennaDesign = async (
   stylePrompt: string,
   outfitContext?: string
 ): Promise<string> => {
-  try {
-    const result = await apiCall<{ image: string }>('/ai/generate-design', {
-      image: base64Image,
-      stylePrompt,
-      outfitContext,
-    });
-    return result.image;
-  } catch (error) {
-    console.error("Generation failed", error);
-    throw error;
-  }
+  // Note: Gemini can't generate images, only analyze
+  // Return a placeholder or use the original image
+  console.warn("Image generation not available - Gemini API doesn't support image generation");
+  throw new Error("Image generation requires a separate service. Please use the gallery templates instead.");
 };
