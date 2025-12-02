@@ -1,55 +1,10 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1",
-      "headers": {
-        "Cache-Control": "public, max-age=31536000, immutable"
-      }
-    },
-    {
-      "src": "/og-image\\.(png|jpg|svg)",
-      "dest": "/og-image.$1",
-      "headers": {
-        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
-      }
-    },
-    {
-      "src": "/(favicon\\.svg|logo\\.svg)",
-      "dest": "/$1",
-      "headers": {
-        "Cache-Control": "public, max-age=604800, stale-while-revalidate=86400"
-      }
-    },
-    {
-      "src": "/sitemap\\.xml",
-      "dest": "/sitemap.xml",
-      "headers": {
-        "Content-Type": "application/xml",
-        "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400"
-      }
-    },
-    {
-      "src": "/robots\\.txt",
-      "dest": "/robots.txt",
-      "headers": {
-        "Content-Type": "text/plain",
-        "Cache-Control": "public, max-age=86400"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
@@ -83,6 +38,15 @@
       ]
     },
     {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
       "source": "/(.*)\\.(js|css|woff2?|ttf|eot)",
       "headers": [
         {
@@ -97,6 +61,32 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/sitemap.xml",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/xml"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/robots.txt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
         }
       ]
     }
