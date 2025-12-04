@@ -3,7 +3,8 @@ import { GeneratorStep, HandAnalysis } from '../types';
 import { useAuth } from '../context/SupabaseAuthContext';
 import { supabaseApi } from '../lib/supabaseApi';
 import { safeStorage } from '../lib/storage';
-import { analyzeHandImage, generateHennaDesign, analyzeOutfitImage, generateStyleThumbnail } from '../services/geminiService';
+import { analyzeHandImage, generateHennaDesign, generateHennaDesignPro, analyzeOutfitImage, generateStyleThumbnail } from '../services/geminiService';
+import { applyHennaDesign } from '../lib/handDetection';
 import SEOHead, { SEO_CONFIGS } from './SEOHead';
 
 interface DesignFlowProps {
@@ -65,6 +66,7 @@ const DesignFlow: React.FC<DesignFlowProps> = ({ onBack, onViewSaved, onBookCons
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [generationMode, setGenerationMode] = useState<'overlay' | 'standard' | 'pro'>('standard');
   
   // UI State
   const [isLoading, setIsLoading] = useState(false);
@@ -226,39 +228,83 @@ const FALLBACK_STYLES: HennaStyle[] = [
     const styleToUse = styleOverride || selectedStyle;
     if (!styleToUse || !selectedFile) return;
     if (styleOverride) setSelectedStyle(styleOverride);
+    
     setIsLoading(true);
+    
     try {
+      let resultImage: string;
       const base64 = await convertToBase64(selectedFile);
       const outfitContext = outfitType ? `${outfitType} style in ${outfitColors.join(', ')} colors, featuring ${outfitTags.join(', ')} elements` : 'elegant bridal style';
-      const resultImage = await generateHennaDesign(base64, styleToUse.promptModifier, outfitContext);
+      
+      if (generationMode === 'overlay' && previewUrl) {
+        // Pattern Overlay Mode - preserves exact hand position
+        try {
+          resultImage = await applyHennaDesign(previewUrl, styleToUse.name);
+        } catch (overlayError) {
+          console.warn('Overlay mode failed, falling back to Standard AI:', overlayError);
+          resultImage = await generateHennaDesign(base64, styleToUse.promptModifier, outfitContext);
+        }
+      } else if (generationMode === 'pro') {
+        // Pro AI Mode - premium model with better quality
+        resultImage = await generateHennaDesignPro(base64, styleToUse.promptModifier, outfitContext);
+      } else {
+        // Standard AI Mode - default generation
+        resultImage = await generateHennaDesign(base64, styleToUse.promptModifier, outfitContext);
+      }
+      
       setGeneratedImage(resultImage);
       setIsSaved(false);
       setStep(GeneratorStep.RESULT);
     } catch (error: any) {
       const msg = error?.message || '';
-      if (msg.includes('429') || msg.includes('quota') || msg.includes('rate')) alert("API rate limit reached. Please wait 30 seconds and try again.");
-      else alert("Something went wrong generating the design. Please try again.");
-    } finally { setIsLoading(false); }
+      alert(msg || "Something went wrong. Please try again.");
+    } finally { 
+      setIsLoading(false); 
+    }
   };
 
   const saveDesign = async () => {
     if (!generatedImage || !selectedStyle) return;
+    setIsLoading(true);
+    
     try {
       const outfitContext = outfitType ? `${outfitType} - ${outfitColors.join(', ')} - ${outfitTags.join(', ')}` : 'Custom';
       
       if (isAuthenticated && user) {
-        // Save to Supabase for authenticated users
+        // Convert base64 to blob for upload
+        const uploadImageToSupabase = async (base64Data: string, fileName: string): Promise<string> => {
+          try {
+            // Convert base64 to blob
+            const response = await fetch(base64Data);
+            const blob = await response.blob();
+            const file = new File([blob], fileName, { type: 'image/png' });
+            
+            // Upload to Supabase storage
+            return await supabaseApi.uploadImage(file, 'designs');
+          } catch (err) {
+            console.warn('Image upload failed, using base64 fallback:', err);
+            return base64Data; // Fallback to base64 if upload fails
+          }
+        };
+
+        // Upload images to Supabase Storage
+        const [handImageUrl, generatedImageUrl] = await Promise.all([
+          previewUrl ? uploadImageToSupabase(previewUrl, `hand-${Date.now()}.png`) : Promise.resolve(''),
+          uploadImageToSupabase(generatedImage, `design-${Date.now()}.png`),
+        ]);
+
+        // Save design with uploaded image URLs
         await supabaseApi.createDesign({
           styleId: selectedStyle.id,
-          handImageUrl: previewUrl || generatedImage,
-          generatedImageUrl: generatedImage,
+          handImageUrl,
+          generatedImageUrl,
           outfitContext,
           handAnalysis: analysis || undefined,
           isPublic: false,
         });
         setIsSaved(true);
       } else {
-        // Save to safeStorage for anonymous users
+        // Save to safeStorage for anonymous users (keep base64 for now)
         const newDesign = { 
           id: Date.now().toString(), 
           imageUrl: generatedImage, 
@@ -275,6 +321,8 @@ const FALLBACK_STYLES: HennaStyle[] = [
     } catch (error: any) { 
       console.error('Save design error:', error);
       alert("Unable to save design: " + (error.message || 'Unknown error')); 
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -605,6 +653,74 @@ const FALLBACK_STYLES: HennaStyle[] = [
               </div>
             </div>
           )}
+
+          {/* Generation Mode Toggle - Three Options */}
+          <div className="flex justify-center mb-4">
+            <div className="inline-flex rounded-full bg-white shadow-sm border border-[#F3E0D5] p-1 flex-wrap gap-1">
+              <button 
+                onClick={() => setGenerationMode('overlay')} 
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${generationMode === 'overlay' ? 'bg-primary text-white' : 'text-[#2B1810]/60 hover:text-primary'}`}
+                title="Pattern overlaid on your exact hand (instant, free)"
+              >
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">layers</span>
+                  Overlay
+                </span>
+              </button>
+              <button 
+                onClick={() => setGenerationMode('standard')} 
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${generationMode === 'standard' ? 'bg-primary text-white' : 'text-[#2B1810]/60 hover:text-primary'}`}
+                title="AI generates design (good quality, may adjust position)"
+              >
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                  AI Standard
+                </span>
+              </button>
+              <button 
+                onClick={() => setGenerationMode('pro')} 
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${generationMode === 'pro' ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg' : 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'}`}
+                title="Premium AI model (best quality, preserves position)"
+              >
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">workspace_premium</span>
+                  AI Pro
+                  <span className="text-xs">⭐</span>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Mode Description */}
+          <div className="text-center mb-6">
+            {generationMode === 'overlay' && (
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-sm text-[#2B1810]/60 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs text-green-600">check_circle</span>
+                  Pattern overlaid on your exact hand • Instant • Free
+                </p>
+              </div>
+            )}
+            {generationMode === 'standard' && (
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-sm text-[#2B1810]/60 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs text-blue-600">info</span>
+                  AI generates new image • Good quality • Free (5/hour)
+                </p>
+              </div>
+            )}
+            {generationMode === 'pro' && (
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-sm font-medium text-amber-700 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">workspace_premium</span>
+                  Premium AI • Best quality • Preserves position
+                </p>
+                <p className="text-xs text-amber-600">
+                  Free: 5 Pro generations per day
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Toggle between Styles and Community Templates */}
           {approvedTemplates.length > 0 && (

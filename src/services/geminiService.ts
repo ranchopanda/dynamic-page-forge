@@ -1,48 +1,59 @@
 import { HandAnalysis, OutfitAnalysis } from "../types";
+import { rateLimiter, RATE_LIMITS } from "../lib/rateLimiter";
 
-// Use Gemini API directly from frontend
-const GEMINI_API_KEY = 'AIzaSyBmE26lEC7izfY_ERA1wBXpxBVKUFwF7pQ';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
-const IMAGE_GEN_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent';
+// SECURITY: API calls now go through server-side endpoints
+// This protects the Gemini API key from being exposed in the browser
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-// Helper to call Gemini API directly
-const callGemini = async (prompt: string, image?: string): Promise<string> => {
-  const parts: any[] = [{ text: prompt }];
-  
-  if (image) {
-    // Remove data URL prefix if present
-    const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
-    parts.push({
-      inline_data: {
-        mime_type: 'image/jpeg',
-        data: base64Data
-      }
-    });
+// Helper to get auth token from localStorage
+const getAuthToken = (): string | null => {
+  try {
+    // Try to get Supabase session token
+    const supabaseAuth = localStorage.getItem('henna-auth');
+    if (supabaseAuth) {
+      const parsed = JSON.parse(supabaseAuth);
+      return parsed?.access_token || null;
+    }
+    // Fallback to old auth token
+    return localStorage.getItem('auth_token');
+  } catch {
+    return null;
   }
+};
 
-  const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+// Helper to call server-side AI endpoints
+const callServerAI = async (endpoint: string, body: any): Promise<any> => {
+  const token = getAuthToken();
+  
+  const response = await fetch(`${API_URL}${endpoint}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
-    body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2048,
-      }
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.status}`);
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `Server error: ${response.status}`);
   }
 
-  const data = await response.json();
-  return data.candidates[0].content.parts[0].text;
+  return response.json();
 };
 
 export const analyzeHandImage = async (base64Image: string): Promise<HandAnalysis> => {
+  // Check rate limit
+  const cooldownCheck = rateLimiter.checkCooldown('ai-hand-analysis', RATE_LIMITS.AI_ANALYSIS.cooldown);
+  if (!cooldownCheck.allowed) {
+    throw new Error(`Please wait ${cooldownCheck.retryAfter} seconds before analyzing another image.`);
+  }
+
+  const rateCheck = rateLimiter.checkLimit('ai-hand-analysis', RATE_LIMITS.AI_ANALYSIS.max, RATE_LIMITS.AI_ANALYSIS.window);
+  if (!rateCheck.allowed) {
+    throw new Error(`Rate limit exceeded. Please wait ${rateCheck.retryAfter} seconds before trying again.`);
+  }
+
   const fallbackAnalysis: HandAnalysis = {
     skinTone: "Warm/Neutral",
     handShape: "Classic",
@@ -54,31 +65,27 @@ export const analyzeHandImage = async (base64Image: string): Promise<HandAnalysi
   };
 
   try {
-    const prompt = `Analyze this hand image for henna/mehendi design. Return ONLY valid JSON with this structure:
-{
-  "skinTone": "description",
-  "handShape": "description",
-  "coverage": "description",
-  "keyFeature": "description",
-  "fingerShape": "description",
-  "wristArea": "description",
-  "recommendedStyles": ["style1", "style2"]
-}`;
-
-    const result = await callGemini(prompt, base64Image);
-    const jsonMatch = result.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    return fallbackAnalysis;
+    const result = await callServerAI('/ai/analyze-hand', { image: base64Image });
+    return result;
   } catch (error: any) {
-    console.error("Analysis failed", error);
+    console.error("Hand analysis failed:", error.message);
     return fallbackAnalysis;
   }
 };
 
 
 export const analyzeOutfitImage = async (base64Image: string): Promise<OutfitAnalysis> => {
+  // Check rate limit
+  const cooldownCheck = rateLimiter.checkCooldown('ai-outfit-analysis', RATE_LIMITS.AI_ANALYSIS.cooldown);
+  if (!cooldownCheck.allowed) {
+    throw new Error(`Please wait ${cooldownCheck.retryAfter} seconds before analyzing another outfit.`);
+  }
+
+  const rateCheck = rateLimiter.checkLimit('ai-outfit-analysis', RATE_LIMITS.AI_ANALYSIS.max, RATE_LIMITS.AI_ANALYSIS.window);
+  if (!rateCheck.allowed) {
+    throw new Error(`Rate limit exceeded. Please wait ${rateCheck.retryAfter} seconds before trying again.`);
+  }
+
   const fallbackAnalysis: OutfitAnalysis = {
     outfitType: "Traditional Lehenga",
     dominantColors: ["#8F3E27", "#D8A85B"],
@@ -86,21 +93,10 @@ export const analyzeOutfitImage = async (base64Image: string): Promise<OutfitAna
   };
 
   try {
-    const prompt = `Analyze this outfit image. Return ONLY valid JSON:
-{
-  "outfitType": "description",
-  "dominantColors": ["#hex1", "#hex2"],
-  "styleKeywords": ["keyword1", "keyword2"]
-}`;
-
-    const result = await callGemini(prompt, base64Image);
-    const jsonMatch = result.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    return fallbackAnalysis;
-  } catch (error) {
-    console.error("Outfit analysis failed", error);
+    const result = await callServerAI('/ai/analyze-outfit', { image: base64Image });
+    return result;
+  } catch (error: any) {
+    console.error("Outfit analysis failed:", error.message);
     return fallbackAnalysis;
   }
 };
@@ -115,64 +111,73 @@ export const generateHennaDesign = async (
   stylePrompt: string,
   outfitContext?: string
 ): Promise<string> => {
+  // Check rate limit with stricter limits for expensive AI generation
+  const cooldownCheck = rateLimiter.checkCooldown('ai-design-generation', RATE_LIMITS.AI_GENERATION.cooldown);
+  if (!cooldownCheck.allowed) {
+    throw new Error(`Please wait ${cooldownCheck.retryAfter} seconds before generating another design.`);
+  }
+
+  const rateCheck = rateLimiter.checkLimit('ai-design-generation', RATE_LIMITS.AI_GENERATION.max, RATE_LIMITS.AI_GENERATION.window);
+  if (!rateCheck.allowed) {
+    throw new Error(`You've reached the generation limit. Please wait ${rateCheck.retryAfter} seconds before trying again.`);
+  }
+
   try {
-    // Create detailed prompt for henna design generation
-    const prompt = `Generate a beautiful ${stylePrompt} henna/mehendi design on this hand. ${outfitContext ? `The design should complement: ${outfitContext}.` : ''} 
-    
-The design should:
-- Follow traditional henna art patterns
-- Be intricate and detailed
-- Cover fingers, palm, and wrist appropriately
-- Look natural and elegant on the hand
-- Use traditional motifs like paisleys, flowers, mandalas, vines
-- Be photorealistic and high quality`;
-
-    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-    
-    const response = await fetch(`${IMAGE_GEN_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64Data
-              }
-            }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 4096,
-        }
-      }),
+    const result = await callServerAI('/ai/generate-design', {
+      image: base64Image,
+      stylePrompt,
+      outfitContext,
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('Image generation error:', error);
-      throw new Error(`Image generation failed: ${response.status}`);
-    }
-
-    const data = await response.json();
     
-    // Extract generated image from response
-    if (data.candidates && data.candidates[0]?.content?.parts) {
-      for (const part of data.candidates[0].content.parts) {
-        if (part.inline_data) {
-          return `data:${part.inline_data.mime_type};base64,${part.inline_data.data}`;
-        }
-      }
+    return result.image;
+  } catch (error: any) {
+    console.error("Design generation failed:", error.message);
+    
+    // Provide user-friendly error messages
+    if (error.message.includes('429') || error.message.includes('quota')) {
+      throw new Error("AI service is temporarily busy. Please wait 30 seconds and try again.");
     }
     
-    throw new Error('No image generated in response');
-  } catch (error) {
-    console.error("Design generation failed", error);
     throw new Error("Unable to generate design. Please try again or browse our gallery for inspiration.");
+  }
+};
+
+/**
+ * Generate henna design using PREMIUM AI model
+ * Free for everyone with 5 per day limit
+ */
+export const generateHennaDesignPro = async (
+  base64Image: string,
+  stylePrompt: string,
+  outfitContext?: string
+): Promise<string> => {
+  // Rate limiting for Pro: 5 per day (more expensive model)
+  const cooldownCheck = rateLimiter.checkCooldown('ai-design-generation-pro', 30000); // 30s cooldown
+  if (!cooldownCheck.allowed) {
+    throw new Error(`Pro generation cooldown. Please wait ${cooldownCheck.retryAfter} seconds.`);
+  }
+
+  const rateCheck = rateLimiter.checkLimit('ai-design-generation-pro', 5, 86400000); // 5 per day (24 hours)
+  if (!rateCheck.allowed) {
+    const waitHours = rateCheck.retryAfter ? Math.ceil(rateCheck.retryAfter / 3600) : 24;
+    throw new Error(`Pro generation limit reached (5 per day). Please wait ${waitHours} hours or sign up for unlimited access.`);
+  }
+
+  try {
+    const result = await callServerAI('/ai/generate-design-pro', {
+      image: base64Image,
+      stylePrompt,
+      outfitContext,
+    });
+    
+    return result.image;
+  } catch (error: any) {
+    console.error("Pro design generation failed:", error.message);
+    
+    if (error.message.includes('quota') || error.message.includes('limit')) {
+      throw new Error("You've reached your Pro generation limit (5 per day). Try again tomorrow or sign up for unlimited access.");
+    }
+    
+    throw new Error("Pro generation failed. Please try Standard AI or Pattern Overlay.");
   }
 };

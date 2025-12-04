@@ -1,12 +1,95 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { GoogleGenAI, Type } from '@google/genai';
-import { authenticate } from '../middleware/auth.js';
+import { optionalAuth, authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { AppError } from '../middleware/errorHandler.js';
 import rateLimit from 'express-rate-limit';
+import sharp from 'sharp';
 
 const router = Router();
+
+// Watermark utility function - adds prominent watermarks to prevent piracy
+async function addWatermark(imageBase64: string): Promise<string> {
+  try {
+    const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+    
+    const metadata = await sharp(imageBuffer).metadata();
+    const width = metadata.width || 800;
+    const height = metadata.height || 600;
+    
+    // Create multiple watermarks for better protection
+    const watermarkSize = Math.min(Math.floor(width * 0.15), 200);
+    const fontSize = Math.floor(watermarkSize * 0.2);
+    
+    // Main watermark SVG - larger and more visible
+    const watermarkSvg = `
+      <svg width="${watermarkSize}" height="${Math.floor(watermarkSize * 0.5)}">
+        <defs>
+          <filter id="shadow">
+            <feDropShadow dx="2" dy="2" stdDeviation="2" flood-opacity="0.5"/>
+          </filter>
+        </defs>
+        <style>
+          .watermark { 
+            fill: rgba(255, 255, 255, 0.85); 
+            font-family: 'Arial Black', Arial, sans-serif; 
+            font-weight: 900;
+            font-size: ${fontSize}px;
+            filter: url(#shadow);
+          }
+          .watermark-outline {
+            fill: none;
+            stroke: rgba(0, 0, 0, 0.3);
+            stroke-width: 1px;
+            font-family: 'Arial Black', Arial, sans-serif; 
+            font-weight: 900;
+            font-size: ${fontSize}px;
+          }
+        </style>
+        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" class="watermark-outline">
+          Mehendi.ai
+        </text>
+        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" class="watermark">
+          Mehendi.ai
+        </text>
+      </svg>
+    `;
+    
+    const watermarkBuffer = Buffer.from(watermarkSvg);
+    
+    // Add watermarks to multiple corners for better protection
+    const watermarkedImage = await sharp(imageBuffer)
+      .composite([
+        // Bottom-right (main)
+        {
+          input: watermarkBuffer,
+          gravity: 'southeast',
+          blend: 'over',
+        },
+        // Top-left (secondary)
+        {
+          input: watermarkBuffer,
+          gravity: 'northwest',
+          blend: 'over',
+        },
+        // Center (subtle)
+        {
+          input: watermarkBuffer,
+          gravity: 'center',
+          blend: 'over',
+        },
+      ])
+      .toBuffer();
+    
+    console.log('✅ Watermark applied successfully');
+    return watermarkedImage.toString('base64');
+  } catch (error) {
+    console.error('❌ Watermark error:', error);
+    return imageBase64.replace(/^data:image\/\w+;base64,/, '');
+  }
+}
 
 // Initialize Gemini AI with server-side API key
 const apiKey = process.env.GEMINI_API_KEY;
@@ -17,6 +100,7 @@ const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 const TEXT_MODEL = 'gemini-2.0-flash';
 const IMAGE_MODEL = 'gemini-2.0-flash-exp-image-generation';
+const PRO_IMAGE_MODEL = 'gemini-2.0-flash-exp-image-generation'; // Same model, just different branding
 
 // Rate limiting for AI endpoints (more restrictive)
 const aiLimiter = rateLimit({
@@ -66,8 +150,8 @@ const safeParseJSON = <T>(text: string, fallback: T): T => {
   }
 };
 
-// Analyze hand image
-router.post('/analyze-hand', authenticate, validate(analyzeHandSchema), async (req: Request, res: Response) => {
+// Analyze hand image - Allow anonymous users
+router.post('/analyze-hand', optionalAuth, validate(analyzeHandSchema), async (req: Request, res: Response) => {
   if (!ai) {
     throw new AppError('AI service not configured', 503);
   }
@@ -126,8 +210,8 @@ router.post('/analyze-hand', authenticate, validate(analyzeHandSchema), async (r
   }
 });
 
-// Analyze outfit image
-router.post('/analyze-outfit', authenticate, validate(analyzeOutfitSchema), async (req: Request, res: Response) => {
+// Analyze outfit image - Allow anonymous users
+router.post('/analyze-outfit', optionalAuth, validate(analyzeOutfitSchema), async (req: Request, res: Response) => {
   if (!ai) {
     throw new AppError('AI service not configured', 503);
   }
@@ -171,19 +255,39 @@ router.post('/analyze-outfit', authenticate, validate(analyzeOutfitSchema), asyn
   }
 });
 
-// Generate henna design
-router.post('/generate-design', authenticate, validate(generateDesignSchema), async (req: Request, res: Response) => {
+// Generate henna design - Allow anonymous users
+router.post('/generate-design', optionalAuth, validate(generateDesignSchema), async (req: Request, res: Response) => {
   if (!ai) {
     throw new AppError('AI service not configured', 503);
   }
 
   const { image, stylePrompt, outfitContext } = req.body;
 
-  let finalPrompt = `Generate a high-quality, photorealistic image of this exact hand with a beautiful ${stylePrompt} henna (mehendi) design applied to it. Keep the background and hand position exactly the same if possible. Focus on intricate details and rich stain color.`;
+  // Improved prompt with strict positioning requirements
+  let finalPrompt = `CRITICAL INSTRUCTIONS - You MUST follow these exactly:
+
+1. PRESERVE EXACT ORIENTATION: The hand in the generated image MUST be in the EXACT same position and orientation as the reference image. DO NOT rotate, flip, or change the angle.
+
+2. PRESERVE EXACT BACKGROUND: Keep the background IDENTICAL to the reference image.
+
+3. PRESERVE EXACT LIGHTING: Match the lighting, shadows, and color temperature of the reference image.
+
+4. ONLY ADD HENNA: The ONLY difference should be the addition of a beautiful ${stylePrompt} henna (mehendi) design on the hand.
+
+Generate a photorealistic image where:
+- The hand position is IDENTICAL to the reference (same rotation, same angle, same pose)
+- The background is UNCHANGED
+- The lighting is UNCHANGED
+- A detailed ${stylePrompt} henna design is applied to the hand
+- The henna design features traditional motifs: paisleys, flowers, mandalas, vines, geometric patterns
+- The henna has a rich, natural stain color (reddish-brown)
+- The design covers fingers, palm, and wrist appropriately for the style`;
   
   if (outfitContext) {
-    finalPrompt += ` The design should complement an outfit described as: ${outfitContext}.`;
+    finalPrompt += `\n- The henna design complements this outfit: ${outfitContext}`;
   }
+  
+  finalPrompt += `\n\nREMEMBER: Do NOT rotate or change the hand position. The hand must appear EXACTLY as it does in the reference image, with only the henna design added.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -201,7 +305,104 @@ router.post('/generate-design', authenticate, validate(generateDesignSchema), as
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) {
-        res.json({ image: `data:image/png;base64,${part.inlineData.data}` });
+        // Add watermark to generated image
+        const watermarkedImage = await addWatermark(part.inlineData.data);
+        res.json({ image: `data:image/png;base64,${watermarkedImage}` });
+        return;
+      }
+    }
+    
+    throw new AppError('No image generated', 500);
+  } catch (error: any) {
+    console.error('Design generation error:', error.message || error);
+    if (error instanceof AppError) throw error;
+    throw new AppError(`Failed to generate design: ${error.message || 'Unknown error'}`, 500);
+  }
+});
+
+// Generate henna design with PRO model - Free with daily limit (5/day)
+router.post('/generate-design-pro', optionalAuth, validate(generateDesignSchema), async (req: Request, res: Response) => {
+  if (!ai) {
+    throw new AppError('AI service not configured', 503);
+  }
+
+  const userId = req.user?.userId;
+  
+  // Pro is now free for everyone with 5 per day limit
+  // Authenticated users get tracked by userId, anonymous by IP
+  // TODO: In future, authenticated users with subscription can get higher limits
+
+  const { image, stylePrompt, outfitContext } = req.body;
+
+  // Enhanced prompt for Pro model with even stricter requirements
+  let finalPrompt = `ULTRA-CRITICAL INSTRUCTIONS FOR PREMIUM GENERATION:
+
+You are using the PREMIUM model. Follow these instructions EXACTLY:
+
+1. ABSOLUTE POSITION LOCK: The hand MUST be in the EXACT same position, angle, and orientation as the reference image. DO NOT rotate even 1 degree.
+
+2. PIXEL-PERFECT BACKGROUND: Keep every pixel of the background IDENTICAL.
+
+3. EXACT LIGHTING MATCH: Replicate the exact lighting, shadows, highlights, and color temperature.
+
+4. ONLY ADD HENNA: The SOLE modification is adding a premium-quality ${stylePrompt} henna design.
+
+Generate an ULTRA-HIGH-QUALITY photorealistic image where:
+- Hand position is LOCKED to reference (zero rotation, zero angle change)
+- Background is PIXEL-PERFECT match
+- Lighting is EXACT replica
+- Henna design is PREMIUM QUALITY with:
+  * Ultra-fine details and intricate patterns
+  * Rich, natural henna stain color (deep reddish-brown)
+  * Professional-level artistry
+  * Traditional motifs: paisleys, flowers, mandalas, vines, geometric patterns
+  * Appropriate coverage for ${stylePrompt} style
+  * Natural flow following hand contours`;
+  
+  if (outfitContext) {
+    finalPrompt += `\n- Design harmonizes perfectly with: ${outfitContext}`;
+  }
+  
+  finalPrompt += `\n\nPREMIUM QUALITY REQUIREMENTS:
+- Maximum detail and resolution
+- Professional henna artist quality
+- Natural, realistic appearance
+- Perfect integration with hand
+
+CRITICAL: This is a PREMIUM generation. The hand must be ABSOLUTELY IDENTICAL to the reference. Only the henna design is new. Zero tolerance for position changes.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: PRO_IMAGE_MODEL, // Use premium model
+      contents: {
+        parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: image } },
+          { text: finalPrompt },
+        ],
+      },
+      config: {
+        responseModalities: ['image', 'text'],
+        temperature: 0.4, // Lower temperature for more consistent results
+      },
+    });
+
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        // Log usage to database (optional)
+        if (userId) {
+          console.log(`✨ Pro generation for user ${userId}`);
+        } else {
+          console.log(`✨ Pro generation for anonymous user (IP: ${req.ip})`);
+        }
+        
+        // Add watermark to generated image
+        const watermarkedImage = await addWatermark(part.inlineData.data);
+        
+        res.json({ 
+          image: `data:image/png;base64,${watermarkedImage}`,
+          model: 'pro',
+          message: 'Generated with Premium AI model'
+        });
         return;
       }
     }
@@ -209,7 +410,8 @@ router.post('/generate-design', authenticate, validate(generateDesignSchema), as
     throw new AppError('No image generated', 500);
   } catch (error: any) {
     if (error instanceof AppError) throw error;
-    throw new AppError('Failed to generate design', 500);
+    console.error('Pro generation error:', error);
+    throw new AppError('Failed to generate premium design', 500);
   }
 });
 

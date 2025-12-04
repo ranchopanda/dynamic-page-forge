@@ -28,8 +28,23 @@ const app = express();
 // Trust proxy for Vercel/production (needed for secure cookies and HTTPS detection)
 app.set('trust proxy', 1);
 
-// HTTPS enforcement in production
+// CORS configuration - MUST come before HTTPS redirect to handle preflight requests
+app.use(cors({
+  origin: config.nodeEnv === 'development' 
+    ? ['http://localhost:3000', 'http://localhost:3001']
+    : config.frontendUrl,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// HTTPS enforcement in production (after CORS to allow preflight)
 app.use((req, res, next) => {
+  // Skip redirect for OPTIONS (preflight) requests
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+  
   if (config.nodeEnv === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
     return res.redirect(301, `https://${req.headers.host}${req.url}`);
   }
@@ -80,12 +95,6 @@ const passwordResetLimiter = rateLimit({
 
 // Apply general rate limiting to all API routes
 app.use('/api', generalLimiter);
-
-// CORS configuration
-app.use(cors({
-  origin: config.frontendUrl,
-  credentials: true,
-}));
 
 // Body parsing with reasonable limits
 app.use(express.json({ limit: '10mb' }));

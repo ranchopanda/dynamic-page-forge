@@ -204,13 +204,28 @@ const AppRoutes: React.FC = () => {
                 <Route path="/" element={<LandingPage />} />
                 
                 <Route path="/design" element={
-                  <DesignFlow 
-                    onBack={() => navigate('/')} 
-                    onViewSaved={() => navigate('/saved')} 
-                    onBookConsultation={goToBooking}
-                    onGallery={() => navigate('/gallery')}
-                    onArtists={() => navigate('/artists')}
-                  />
+                  <>
+                    <Header
+                      onBookClick={() => navigate('/design')}
+                      onSavedClick={() => navigate('/saved')}
+                      onGalleryClick={() => navigate('/gallery')}
+                      onArtistsClick={() => navigate('/artists')}
+                      onProfileClick={() => navigate('/profile')}
+                      onLogoClick={() => navigate('/')}
+                      onBlogClick={() => navigate('/blog')}
+                      onAdminClick={() => navigate('/admin')}
+                      onAuthClick={() => openAuth('login')}
+                    />
+                    <main id="main-content">
+                      <DesignFlow 
+                        onBack={() => navigate('/')} 
+                        onViewSaved={() => navigate('/saved')} 
+                        onBookConsultation={goToBooking}
+                        onGallery={() => navigate('/gallery')}
+                        onArtists={() => navigate('/artists')}
+                      />
+                    </main>
+                  </>
                 } />
                 
                 <Route path="/saved" element={
@@ -260,19 +275,32 @@ const AppRoutes: React.FC = () => {
                 } />
                 
                 <Route path="/profile" element={
-                  <main id="main-content">
-                    <Profile 
-                      onBack={() => navigate('/')} 
-                      onViewDesign={(id) => console.log('View design:', id)}
-                      onStartDesign={() => navigate('/design')}
-                      onGallery={() => navigate('/gallery')}
-                      onArtists={() => navigate('/artists')}
-                      onSaved={() => navigate('/saved')}
-                      onBooking={goToBooking}
-                      onAuth={() => openAuth('login')}
-                      onAdmin={() => navigate('/admin')}
+                  <>
+                    <Header
+                      onBookClick={() => navigate('/design')}
+                      onSavedClick={() => navigate('/saved')}
+                      onGalleryClick={() => navigate('/gallery')}
+                      onArtistsClick={() => navigate('/artists')}
+                      onProfileClick={() => navigate('/profile')}
+                      onLogoClick={() => navigate('/')}
+                      onBlogClick={() => navigate('/blog')}
+                      onAdminClick={() => navigate('/admin')}
+                      onAuthClick={() => openAuth('login')}
                     />
-                  </main>
+                    <main id="main-content">
+                      <Profile 
+                        onBack={() => navigate('/')} 
+                        onViewDesign={(id) => console.log('View design:', id)}
+                        onStartDesign={() => navigate('/design')}
+                        onGallery={() => navigate('/gallery')}
+                        onArtists={() => navigate('/artists')}
+                        onSaved={() => navigate('/saved')}
+                        onBooking={goToBooking}
+                        onAuth={() => openAuth('login')}
+                        onAdmin={() => navigate('/admin')}
+                      />
+                    </main>
+                  </>
                 } />
                 
                 <Route path="/gallery" element={
@@ -321,49 +349,114 @@ const AppRoutes: React.FC = () => {
                 } />
                 
                 <Route path="/admin" element={
-                  <main id="main-content">
-                    <AdminDashboard 
-                      onBack={() => navigate('/')}
-                      onStartDesign={() => navigate('/design')}
-                      onGallery={() => navigate('/gallery')}
-                      onArtists={() => navigate('/artists')}
-                      onSaved={() => navigate('/saved')}
-                      onBooking={goToBooking}
-                      onAuth={() => openAuth('login')}
+                  <>
+                    <Header
+                      onBookClick={() => navigate('/design')}
+                      onSavedClick={() => navigate('/saved')}
+                      onGalleryClick={() => navigate('/gallery')}
+                      onArtistsClick={() => navigate('/artists')}
+                      onProfileClick={() => navigate('/profile')}
+                      onLogoClick={() => navigate('/')}
+                      onBlogClick={() => navigate('/blog')}
+                      onAdminClick={() => navigate('/admin')}
+                      onAuthClick={() => openAuth('login')}
                     />
-                  </main>
+                    <main id="main-content">
+                      <AdminDashboard 
+                        onBack={() => navigate('/')}
+                        onStartDesign={() => navigate('/design')}
+                        onGallery={() => navigate('/gallery')}
+                        onArtists={() => navigate('/artists')}
+                        onSaved={() => navigate('/saved')}
+                        onBooking={goToBooking}
+                        onAuth={() => openAuth('login')}
+                      />
+                    </main>
+                  </>
                 } />
                 
                 <Route path="/blog" element={
-                  <main id="main-content">
-                    <Blog
-                      onBack={() => navigate('/')}
-                      onStartDesign={() => navigate('/design')}
-                      onGallery={() => navigate('/gallery')}
-                      onArtists={() => navigate('/artists')}
-                      onSaved={() => navigate('/saved')}
-                      onBooking={goToBooking}
-                      onAuth={() => openAuth('login')}
+                  <>
+                    <Header
+                      onBookClick={() => navigate('/design')}
+                      onSavedClick={() => navigate('/saved')}
+                      onGalleryClick={() => navigate('/gallery')}
+                      onArtistsClick={() => navigate('/artists')}
+                      onProfileClick={() => navigate('/profile')}
+                      onLogoClick={() => navigate('/')}
+                      onBlogClick={() => navigate('/blog')}
+                      onAdminClick={() => navigate('/admin')}
+                      onAuthClick={() => openAuth('login')}
                     />
-                  </main>
+                    <main id="main-content">
+                      <Blog
+                        onBack={() => navigate('/')}
+                        onStartDesign={() => navigate('/design')}
+                        onGallery={() => navigate('/gallery')}
+                        onArtists={() => navigate('/artists')}
+                        onSaved={() => navigate('/saved')}
+                        onBooking={goToBooking}
+                        onAuth={() => openAuth('login')}
+                      />
+                    </main>
+                  </>
                 } />
                 
                 <Route path="/privacy" element={
-                  <main id="main-content">
-                    <PrivacyPolicy onBack={() => navigate('/')} />
-                  </main>
+                  <>
+                    <Header
+                      onBookClick={() => navigate('/design')}
+                      onSavedClick={() => navigate('/saved')}
+                      onGalleryClick={() => navigate('/gallery')}
+                      onArtistsClick={() => navigate('/artists')}
+                      onProfileClick={() => navigate('/profile')}
+                      onLogoClick={() => navigate('/')}
+                      onBlogClick={() => navigate('/blog')}
+                      onAdminClick={() => navigate('/admin')}
+                      onAuthClick={() => openAuth('login')}
+                    />
+                    <main id="main-content">
+                      <PrivacyPolicy onBack={() => navigate('/')} />
+                    </main>
+                  </>
                 } />
                 
                 <Route path="/terms" element={
-                  <main id="main-content">
-                    <TermsOfService onBack={() => navigate('/')} />
-                  </main>
+                  <>
+                    <Header
+                      onBookClick={() => navigate('/design')}
+                      onSavedClick={() => navigate('/saved')}
+                      onGalleryClick={() => navigate('/gallery')}
+                      onArtistsClick={() => navigate('/artists')}
+                      onProfileClick={() => navigate('/profile')}
+                      onLogoClick={() => navigate('/')}
+                      onBlogClick={() => navigate('/blog')}
+                      onAdminClick={() => navigate('/admin')}
+                      onAuthClick={() => openAuth('login')}
+                    />
+                    <main id="main-content">
+                      <TermsOfService onBack={() => navigate('/')} />
+                    </main>
+                  </>
                 } />
                 
                 <Route path="/reset-password" element={
-                  <main id="main-content">
-                    <ResetPassword />
-                  </main>
+                  <>
+                    <Header
+                      onBookClick={() => navigate('/design')}
+                      onSavedClick={() => navigate('/saved')}
+                      onGalleryClick={() => navigate('/gallery')}
+                      onArtistsClick={() => navigate('/artists')}
+                      onProfileClick={() => navigate('/profile')}
+                      onLogoClick={() => navigate('/')}
+                      onBlogClick={() => navigate('/blog')}
+                      onAdminClick={() => navigate('/admin')}
+                      onAuthClick={() => openAuth('login')}
+                    />
+                    <main id="main-content">
+                      <ResetPassword />
+                    </main>
+                  </>
                 } />
                 
                 {/* 404 Not Found */}

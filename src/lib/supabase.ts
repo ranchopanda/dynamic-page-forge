@@ -36,25 +36,63 @@ const createSafeStorageWrapper = () => ({
 // Create Supabase client with safe storage configuration
 let supabaseInstance: SupabaseClient;
 
-// Always use our safe storage wrapper - it handles all edge cases
+// Create a custom storage that NEVER expires and persists forever
+const createPersistentStorage = () => {
+  const STORAGE_KEY = 'sb-kowuwhlwetplermbdvbh-auth-token';
+  
+  return {
+    getItem: (key: string): string | null => {
+      try {
+        // Always try localStorage first
+        const item = localStorage.getItem(key);
+        if (item) return item;
+        
+        // Fallback to sessionStorage
+        return sessionStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
+    setItem: (key: string, value: string): void => {
+      try {
+        // Store in BOTH localStorage (persistent) and sessionStorage (backup)
+        localStorage.setItem(key, value);
+        sessionStorage.setItem(key, value);
+      } catch (err) {
+        console.warn('Storage failed:', err);
+      }
+    },
+    removeItem: (key: string): void => {
+      try {
+        // Remove from both storages
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      } catch {
+        // Silently fail
+      }
+    },
+  };
+};
+
+// Always use our persistent storage - sessions never expire unless user logs out
 try {
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true, // Auto-refresh tokens before they expire
+      persistSession: true, // Always persist sessions
+      detectSessionInUrl: true, // Detect sessions from URL
+      storage: createPersistentStorage(), // Use our custom persistent storage
+      storageKey: 'sb-kowuwhlwetplermbdvbh-auth-token',
+      flowType: 'pkce',
+    },
+  });
+} catch {
+  // Fallback: create client with basic persistence
   supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false,
-      storage: createSafeStorageWrapper(),
-      storageKey: 'henna-auth',
-      flowType: 'implicit',
-    },
-  });
-} catch {
-  // Fallback: create client with no persistence at all
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false,
+      detectSessionInUrl: true,
     },
   });
 }

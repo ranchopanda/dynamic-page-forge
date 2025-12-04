@@ -26,8 +26,8 @@ Go to: https://vercel.com/[your-username]/henna-harmony-server/settings/environm
 Add these variables:
 
 ```
-GEMINI_API_KEY=AIzaSyBmE26lEC7izfY_ERA1wBXpxBVKUFwF7pQ
-JWT_SECRET=henna-jwt-secret-key-production-2024-secure-random-string-32chars
+GEMINI_API_KEY=your_actual_gemini_api_key_here
+JWT_SECRET=your_secure_jwt_secret_at_least_32_characters_long
 FRONTEND_URL=https://henna-harmony-him1.vercel.app
 NODE_ENV=production
 ```
@@ -50,7 +50,7 @@ Then redeploy frontend.
 ```bash
 cd server
 vercel env add GEMINI_API_KEY production
-# Paste: AIzaSyBmE26lEC7izfY_ERA1wBXpxBVKUFwF7pQ
+# Paste your actual Gemini API key when prompted
 
 vercel env add JWT_SECRET production
 # Paste: henna-jwt-secret-key-production-2024-secure-random-string-32chars

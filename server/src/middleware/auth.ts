@@ -43,17 +43,40 @@ export const optionalAuth = (req: Request, _res: Response, next: NextFunction): 
 };
 
 export const requireRole = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     if (!req.user) {
       res.status(401).json({ error: 'Authentication required' });
       return;
     }
 
-    if (!roles.includes(req.user.role)) {
-      res.status(403).json({ error: 'Insufficient permissions' });
-      return;
+    // SECURITY: Verify role from database, not just from token
+    // This prevents role manipulation via localStorage/token tampering
+    try {
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+      
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: { role: true },
+      });
+      
+      await prisma.$disconnect();
+      
+      if (!user) {
+        res.status(401).json({ error: 'User not found' });
+        return;
+      }
+      
+      if (!roles.includes(user.role)) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+      
+      // Update req.user with verified role
+      req.user.role = user.role;
+      next();
+    } catch (error) {
+      res.status(500).json({ error: 'Authorization check failed' });
     }
-
-    next();
   };
 };

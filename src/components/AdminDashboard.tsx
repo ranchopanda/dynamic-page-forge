@@ -28,7 +28,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onBooking,
   onAuth 
 }) => {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,13 +38,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'styles' | 'designs' | 'blog' | 'settings'>('dashboard');
 
   useEffect(() => {
+    // Wait for auth to finish loading before checking permissions
+    if (authLoading) {
+      return;
+    }
+    
     if (user?.role !== 'ADMIN') {
       setError('Access denied. Admin privileges required.');
       setLoading(false);
       return;
     }
     loadData();
-  }, [user, page]);
+  }, [user, page, authLoading]);
 
   const loadData = async () => {
     setLoading(true);
@@ -75,6 +80,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Only show access denied after auth has loaded
   if (user?.role !== 'ADMIN') {
     return (
       <div className="min-h-screen flex items-center justify-center">

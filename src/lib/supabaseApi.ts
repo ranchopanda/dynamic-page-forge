@@ -1,3 +1,16 @@
+import { error } from 'console';
+import { error } from 'console';
+import { data } from 'react-router-dom';
+import { data } from 'react-router-dom';
+import { data } from 'react-router-dom';
+import { data } from 'react-router-dom';
+import { data } from 'react-router-dom';
+import { data } from 'react-router-dom';
+import { data } from 'react-router-dom';
+import { data } from 'react-router-dom';
+import { data } from 'react-router-dom';
+import { data } from 'react-router-dom';
+import { data } from 'react-router-dom';
 import { supabase, Profile, HennaStyle, Design, Booking, BlogPost, SiteSettings, ArtistProfile, Review } from './supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -492,14 +505,28 @@ class SupabaseApiClient {
 
 
   // Admin Style Management
-  async getAdminStyles(): Promise<HennaStyle[]> {
+  async getAdminStyles(): Promise<any[]> {
     const { data, error } = await supabase
       .from('henna_styles')
       .select('*')
       .order('name');
     
     if (error) throw new Error(error.message);
-    return data || [];
+    
+    // Map snake_case to camelCase for frontend
+    return (data || []).map(style => ({
+      id: style.id,
+      name: style.name,
+      description: style.description,
+      imageUrl: style.image_url,
+      promptModifier: style.prompt_modifier,
+      category: style.category,
+      complexity: style.complexity,
+      coverage: style.coverage,
+      isActive: style.is_active,
+      createdAt: style.created_at,
+      updatedAt: style.updated_at
+    }));
   }
 
   async createStyle(data: {
@@ -510,7 +537,7 @@ class SupabaseApiClient {
     category: string;
     complexity: string;
     coverage: string;
-  }): Promise<HennaStyle> {
+  }): Promise<any> {
     const { data: style, error } = await supabase
       .from('henna_styles')
       .insert({
@@ -526,7 +553,21 @@ class SupabaseApiClient {
       .single();
     
     if (error) throw new Error(error.message);
-    return style;
+    
+    // Map snake_case to camelCase
+    return {
+      id: style.id,
+      name: style.name,
+      description: style.description,
+      imageUrl: style.image_url,
+      promptModifier: style.prompt_modifier,
+      category: style.category,
+      complexity: style.complexity,
+      coverage: style.coverage,
+      isActive: style.is_active,
+      createdAt: style.created_at,
+      updatedAt: style.updated_at
+    };
   }
 
   async updateStyle(styleId: string, data: Partial<{
@@ -538,15 +579,15 @@ class SupabaseApiClient {
     complexity: string;
     coverage: string;
     isActive: boolean;
-  }>): Promise<HennaStyle> {
+  }>): Promise<any> {
     const updateData: any = {};
-    if (data.name) updateData.name = data.name;
-    if (data.description) updateData.description = data.description;
-    if (data.imageUrl) updateData.image_url = data.imageUrl;
-    if (data.promptModifier) updateData.prompt_modifier = data.promptModifier;
-    if (data.category) updateData.category = data.category;
-    if (data.complexity) updateData.complexity = data.complexity;
-    if (data.coverage) updateData.coverage = data.coverage;
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl;
+    if (data.promptModifier !== undefined) updateData.prompt_modifier = data.promptModifier;
+    if (data.category !== undefined) updateData.category = data.category;
+    if (data.complexity !== undefined) updateData.complexity = data.complexity;
+    if (data.coverage !== undefined) updateData.coverage = data.coverage;
     if (data.isActive !== undefined) updateData.is_active = data.isActive;
     
     const { data: style, error } = await supabase
@@ -556,8 +597,25 @@ class SupabaseApiClient {
       .select()
       .single();
     
-    if (error) throw new Error(error.message);
-    return style;
+    if (error) {
+      console.error('Style update error:', error);
+      throw new Error(error.message);
+    }
+    
+    // Map snake_case to camelCase
+    return {
+      id: style.id,
+      name: style.name,
+      description: style.description,
+      imageUrl: style.image_url,
+      promptModifier: style.prompt_modifier,
+      category: style.category,
+      complexity: style.complexity,
+      coverage: style.coverage,
+      isActive: style.is_active,
+      createdAt: style.created_at,
+      updatedAt: style.updated_at
+    };
   }
 
   async deleteStyle(styleId: string) {

@@ -48,7 +48,7 @@ cd server && npm install
 **Frontend (.env.local):**
 ```env
 VITE_API_URL=http://localhost:3001/api
-VITE_GEMINI_API_KEY=your-gemini-api-key
+# SECURITY: Do NOT add VITE_GEMINI_API_KEY here - it will be exposed in browser!
 GEMINI_API_KEY=your-gemini-api-key
 ```
 

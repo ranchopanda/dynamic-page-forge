@@ -72,33 +72,55 @@ const AdminStyleManager: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate required fields
+    if (!formData.name.trim()) {
+      alert('Style name is required');
+      return;
+    }
+    if (!formData.description.trim()) {
+      alert('Description is required');
+      return;
+    }
+    if (!formData.imageUrl.trim()) {
+      alert('Image is required');
+      return;
+    }
+    if (!formData.promptModifier.trim()) {
+      alert('AI Prompt Modifier is required');
+      return;
+    }
+    
     try {
+      console.log('Submitting style:', editingStyle ? 'UPDATE' : 'CREATE', formData);
+      
       if (editingStyle) {
-        await supabaseApi.updateStyle(editingStyle.id, formData);
+        const result = await supabaseApi.updateStyle(editingStyle.id, formData);
+        console.log('Style updated:', result);
       } else {
-        await supabaseApi.createStyle(formData);
+        const result = await supabaseApi.createStyle(formData);
+        console.log('Style created:', result);
       }
       
       setShowAddModal(false);
       setEditingStyle(null);
       resetForm();
-      loadStyles();
-    } catch (error) {
+      await loadStyles();
+    } catch (error: any) {
       console.error('Failed to save style:', error);
-      alert('Failed to save style');
+      alert(`Failed to save style: ${error.message || 'Unknown error'}`);
     }
   };
 
   const handleEdit = (style: Style) => {
     setEditingStyle(style);
     setFormData({
-      name: style.name,
-      description: style.description,
-      imageUrl: style.imageUrl,
-      promptModifier: style.promptModifier,
-      category: style.category,
-      complexity: style.complexity,
-      coverage: style.coverage,
+      name: style.name || '',
+      description: style.description || '',
+      imageUrl: style.imageUrl || '',
+      promptModifier: style.promptModifier || '',
+      category: style.category || 'Traditional',
+      complexity: style.complexity || 'Medium',
+      coverage: style.coverage || 'Full',
     });
     setShowAddModal(true);
   };
@@ -347,9 +369,10 @@ const AdminStyleManager: React.FC = () => {
                     onChange={e => setFormData(prev => ({ ...prev, complexity: e.target.value }))}
                     className="w-full px-4 py-2 border border-primary/20 rounded-lg focus:ring-2 focus:ring-primary outline-none"
                   >
-                    <option>Low</option>
-                    <option>Medium</option>
-                    <option>High</option>
+                    <option value="Simple">Simple</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Complex">Complex</option>
+                    <option value="Intricate">Intricate</option>
                   </select>
                 </div>
 
@@ -360,9 +383,10 @@ const AdminStyleManager: React.FC = () => {
                     onChange={e => setFormData(prev => ({ ...prev, coverage: e.target.value }))}
                     className="w-full px-4 py-2 border border-primary/20 rounded-lg focus:ring-2 focus:ring-primary outline-none"
                   >
-                    <option>Minimal</option>
-                    <option>Partial</option>
-                    <option>Full</option>
+                    <option value="Minimal">Minimal</option>
+                    <option value="Partial">Partial</option>
+                    <option value="Full">Full</option>
+                    <option value="Extended">Extended</option>
                   </select>
                 </div>
               </div>

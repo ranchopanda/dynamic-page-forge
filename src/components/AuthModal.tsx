@@ -21,6 +21,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
     phone: '',
   });
 
+  // Reset form when mode changes to prevent controlled/uncontrolled input warnings
+  React.useEffect(() => {
+    setFormData({
+      email: '',
+      password: '',
+      name: '',
+      phone: '',
+    });
+    setError('');
+    setSuccess('');
+  }, [mode]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -175,7 +187,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
               <div className="text-right">
                 <button
                   type="button"
-                  onClick={() => { setMode('forgot'); setError(''); setSuccess(''); }}
+                  onClick={() => setMode('forgot')}
                   className="text-sm text-primary hover:underline"
                 >
                   Forgot password?
@@ -208,7 +220,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
               <p className="text-sm text-text-primary-light/70 dark:text-text-primary-dark/70">
                 Remember your password?{' '}
                 <button
-                  onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
+                  onClick={() => setMode('login')}
                   className="text-primary font-semibold hover:underline"
                 >
                   Back to Sign in
@@ -218,7 +230,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
               <p className="text-sm text-text-primary-light/70 dark:text-text-primary-dark/70">
                 {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
                 <button
-                  onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setSuccess(''); }}
+                  onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
                   className="text-primary font-semibold hover:underline"
                 >
                   {mode === 'login' ? 'Sign up' : 'Sign in'}

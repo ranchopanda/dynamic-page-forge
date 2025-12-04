@@ -7,9 +7,12 @@ cd server
 
 # Add environment variables
 echo "📝 Adding environment variables..."
-echo "AIzaSyBmE26lEC7izfY_ERA1wBXpxBVKUFwF7pQ" | vercel env add GEMINI_API_KEY production
-echo "henna-jwt-secret-key-production-2024-secure-random-string-32chars" | vercel env add JWT_SECRET production
-echo "https://henna-harmony-him1.vercel.app" | vercel env add FRONTEND_URL production
+echo "⚠️  Please add these manually in Vercel dashboard:"
+echo "   GEMINI_API_KEY=your_actual_gemini_api_key"
+echo "   JWT_SECRET=your_secure_jwt_secret"
+echo "   FRONTEND_URL=https://henna-harmony-him1.vercel.app"
+echo ""
+echo "Or use: vercel env add GEMINI_API_KEY production"
 echo "production" | vercel env add NODE_ENV production
 
 # Deploy

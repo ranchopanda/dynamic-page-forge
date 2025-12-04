@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
@@ -28,58 +28,140 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Keys for localStorage
+const USER_STORAGE_KEY = 'henna_user_data';
+const LOGGED_OUT_KEY = 'henna_logged_out';
+
+// Helper to safely get user from localStorage
+const getStoredUser = (): User | null => {
+  try {
+    const stored = localStorage.getItem(USER_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    // Silent fail
+  }
+  return null;
+};
+
+// Helper to safely store user in localStorage
+const storeUser = (user: User | null) => {
+  try {
+    if (user) {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+      localStorage.removeItem(LOGGED_OUT_KEY); // Clear logout flag
+    } else {
+      localStorage.removeItem(USER_STORAGE_KEY);
+    }
+  } catch {
+    // Silent fail
+  }
+};
+
+// Check if user explicitly logged out
+const hasExplicitlyLoggedOut = (): boolean => {
+  try {
+    return localStorage.getItem(LOGGED_OUT_KEY) === 'true';
+  } catch {
+    return false;
+  }
+};
+
 export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  // Initialize user from localStorage immediately - NEVER start as null if we have stored data
+  const [user, setUser] = useState<User | null>(() => {
+    if (hasExplicitlyLoggedOut()) return null;
+    return getStoredUser();
+  });
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Track if user explicitly logged out
+  const explicitLogoutRef = useRef(false);
+
+  // Custom setUser that also persists to localStorage
+  const setUserPersistent = useCallback((newUser: User | null | ((prev: User | null) => User | null)) => {
+    setUser(prev => {
+      const resolved = typeof newUser === 'function' ? newUser(prev) : newUser;
+      // Only store if not explicitly logged out
+      if (!explicitLogoutRef.current) {
+        storeUser(resolved);
+      }
+      return resolved;
+    });
+  }, []);
 
   const fetchProfile = useCallback(async (userId: string): Promise<User | null> => {
     if (!userId) return null;
     
     try {
-      // Race between fetch and timeout
       const result = await Promise.race([
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single(),
+        supabase.from('profiles').select('*').eq('id', userId).single(),
         new Promise<{ data: null; error: { message: string } }>((resolve) =>
           setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 10000)
         ),
       ]);
       
       const { data: profile, error } = result;
+      if (error || !profile) return null;
       
-      if (error) {
-        // Only log actual errors, not timeouts in production
-        if (error.message !== 'timeout' && process.env.NODE_ENV === 'development') {
-          console.error('Profile fetch error:', error);
-        }
-        return null;
-      }
-      
-      if (!profile) return null;
+      const validRoles: Array<'USER' | 'ARTIST' | 'ADMIN'> = ['USER', 'ARTIST', 'ADMIN'];
+      const userRole = validRoles.includes(profile.role) ? profile.role : 'USER';
       
       return {
         id: profile.id,
         email: profile.email,
         name: profile.name,
         phone: profile.phone,
-        role: profile.role as 'USER' | 'ARTIST' | 'ADMIN',
+        role: userRole,
         avatar: profile.avatar
       };
-    } catch (err) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Profile fetch exception:', err);
-      }
+    } catch {
       return null;
     }
   }, []);
 
 
+  const migrateAnonymousDesigns = async (userId: string) => {
+    try {
+      const savedDesigns = localStorage.getItem('henna_saved_designs');
+      if (!savedDesigns) return;
+      
+      const designs = JSON.parse(savedDesigns);
+      if (!Array.isArray(designs) || designs.length === 0) return;
+      
+      let migratedCount = 0;
+      for (const design of designs) {
+        try {
+          await supabase.from('designs').insert({
+            user_id: userId,
+            hand_image_url: design.imageUrl || '',
+            generated_image_url: design.imageUrl,
+            outfit_context: design.outfitContext || null,
+            hand_analysis: design.analysis ? JSON.stringify(design.analysis) : null,
+            is_public: false,
+            created_at: design.date ? new Date(design.date).toISOString() : new Date().toISOString(),
+          });
+          migratedCount++;
+        } catch {
+          // Silent fail per design
+        }
+      }
+      
+      if (migratedCount > 0) {
+        localStorage.removeItem('henna_saved_designs');
+      }
+    } catch {
+      // Silent fail
+    }
+  };
+
   const refreshUser = useCallback(async () => {
+    // If explicitly logged out, don't refresh
+    if (explicitLogoutRef.current || hasExplicitlyLoggedOut()) return;
+    
     try {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       
@@ -87,196 +169,214 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setSession(currentSession);
         setSupabaseUser(currentSession.user);
         const profile = await fetchProfile(currentSession.user.id);
-        setUser(profile);
-      } else {
-        setSession(null);
-        setSupabaseUser(null);
-        setUser(null);
+        if (profile) {
+          setUserPersistent(profile);
+        }
       }
-    } catch (err: any) {
-      // Handle storage errors gracefully
-      if (err?.message?.toLowerCase().includes('storage')) {
-        console.warn('Storage access blocked during refresh');
-      }
-      setSession(null);
-      setSupabaseUser(null);
-      setUser(null);
+      // NEVER clear user state here
+    } catch {
+      // NEVER clear state on errors
     }
-  }, [fetchProfile]);
+  }, [fetchProfile, setUserPersistent]);
 
+  // Initialize session on mount
   useEffect(() => {
-    // Get initial session with comprehensive error handling for storage issues
+    let mounted = true;
+    
     const initializeSession = async () => {
-      try {
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.warn('Session retrieval error:', error.message);
-        } else {
-          setSession(initialSession);
-          setSupabaseUser(initialSession?.user ?? null);
-          
-          if (initialSession?.user) {
-            fetchProfile(initialSession.user.id).then(setUser).catch(() => {
-              // Ignore profile fetch errors during init
-            });
-          }
-        }
-      } catch (err: any) {
-        // Handle storage access errors gracefully
-        const message = err?.message || String(err);
-        if (message.toLowerCase().includes('storage') || message.toLowerCase().includes('access')) {
-          console.warn('Storage access blocked during session init (suppressed)');
-        } else {
-          console.warn('Session initialization error:', message);
-        }
-      } finally {
+      // If explicitly logged out, don't restore
+      if (hasExplicitlyLoggedOut()) {
+        console.log('[Auth] User explicitly logged out - not restoring');
         setIsLoading(false);
+        return;
+      }
+
+      // Check for stored user
+      const storedUser = getStoredUser();
+      if (storedUser) {
+        console.log('[Auth] Found stored user:', storedUser.email, 'Role:', storedUser.role);
+      }
+
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        if (initialSession?.user) {
+          console.log('[Auth] Active Supabase session found');
+          setSession(initialSession);
+          setSupabaseUser(initialSession.user);
+          
+          // Fetch fresh profile but keep stored user while loading
+          const profile = await fetchProfile(initialSession.user.id);
+          if (mounted && profile) {
+            console.log('[Auth] Profile loaded:', profile.email, 'Role:', profile.role);
+            setUserPersistent(profile);
+          }
+        } else {
+          console.log('[Auth] No Supabase session - keeping stored user if available');
+          // No Supabase session, but we might have stored user
+          // Keep the stored user - they might just have an expired token
+          // The stored user will be shown until they explicitly logout
+        }
+      } catch (err) {
+        console.warn('[Auth] Session init error:', err);
+        // Keep stored user on error
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
     
     initializeSession();
 
-    // Listen for auth changes
-    let subscription: { unsubscribe: () => void } | null = null;
-    
-    try {
-      const { data } = supabase.auth.onAuthStateChange(
-        async (event, newSession) => {
+    // Listen ONLY for sign in events - ignore everything else
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        if (!mounted) return;
+        
+        // Only handle explicit sign in
+        if (event === 'SIGNED_IN' && newSession?.user) {
           setSession(newSession);
-          setSupabaseUser(newSession?.user ?? null);
-          
-          if (newSession?.user) {
-            const profile = await fetchProfile(newSession.user.id);
-            setUser(profile);
-          } else {
-            setUser(null);
-          }
-          
-          if (event === 'SIGNED_OUT') {
-            setUser(null);
+          setSupabaseUser(newSession.user);
+          const profile = await fetchProfile(newSession.user.id);
+          if (profile) {
+            setUserPersistent(profile);
           }
         }
-      );
-      subscription = data.subscription;
-    } catch (err) {
-      console.warn('Auth state listener setup failed:', err);
-    }
+        // IGNORE all other events - especially SIGNED_OUT and TOKEN_REFRESHED failures
+      }
+    );
 
     return () => {
-      subscription?.unsubscribe();
+      mounted = false;
+      subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [fetchProfile, setUserPersistent]);
+
+  // Background session refresh - but NEVER clear user
+  useEffect(() => {
+    if (hasExplicitlyLoggedOut()) return;
+    
+    const refreshSession = async () => {
+      if (explicitLogoutRef.current) return;
+      
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (currentSession) {
+          setSession(currentSession);
+          setSupabaseUser(currentSession.user);
+          // Silently refresh token
+          supabase.auth.refreshSession().catch(() => {});
+        }
+      } catch {
+        // Silent fail - keep user logged in
+      }
+    };
+
+    // Refresh every 5 minutes
+    const interval = setInterval(refreshSession, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    // Clear logout flag
+    explicitLogoutRef.current = false;
+    localStorage.removeItem(LOGGED_OUT_KEY);
     
-    if (error) {
-      throw new Error(error.message);
-    }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
-    if (!data.user) {
-      throw new Error('No user returned from login');
-    }
+    if (error) throw new Error(error.message);
+    if (!data.user) throw new Error('No user returned from login');
     
     setSupabaseUser(data.user);
     setSession(data.session);
     
-    // Set basic user immediately so login completes
+    // Set basic user immediately
     const basicUser: User = {
       id: data.user.id,
       email: data.user.email!,
       name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
       role: 'USER',
     };
-    setUser(basicUser);
+    setUserPersistent(basicUser);
     
-    // Fetch full profile in background (don't await)
-    fetchProfile(data.user.id)
-      .then(profile => {
-        if (profile) {
-          setUser(profile);
-        }
-      })
-      .catch(err => {
-        // Ignore profile fetch errors - user is already logged in with basic info
-        console.warn('Background profile fetch failed:', err?.message);
-      });
+    // Migrate anonymous designs
+    migrateAnonymousDesigns(data.user.id).catch(() => {});
+    
+    // Fetch full profile in background
+    fetchProfile(data.user.id).then(profile => {
+      if (profile) setUserPersistent(profile);
+    }).catch(() => {});
   };
 
   const register = async (data: { email: string; password: string; name: string; phone?: string }) => {
+    // Clear logout flag
+    explicitLogoutRef.current = false;
+    localStorage.removeItem(LOGGED_OUT_KEY);
+    
     const { data: authData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
-      options: {
-        data: {
-          name: data.name,
-          phone: data.phone
-        }
-      }
+      options: { data: { name: data.name, phone: data.phone } }
     });
     
     if (error) throw new Error(error.message);
     
-    // Profile is created automatically via trigger, but we may need to wait
     if (authData.user) {
-      // Small delay to allow trigger to complete
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Check if this is the first user (make them admin)
-      const { count } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-      
+      const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
       const isFirstUser = (count ?? 0) <= 1;
       const userRole = isFirstUser ? 'ADMIN' : 'USER';
       
       let profile = await fetchProfile(authData.user.id);
       
-      // If profile still doesn't exist, create it manually
       if (!profile) {
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            email: data.email,
-            name: data.name,
-            phone: data.phone,
-            role: userRole
-          });
-        
-        if (insertError) {
-          throw new Error('Failed to create user profile');
-        }
-        
+        await supabase.from('profiles').insert({
+          id: authData.user.id,
+          email: data.email,
+          name: data.name,
+          phone: data.phone,
+          role: userRole
+        });
         profile = await fetchProfile(authData.user.id);
       } else if (isFirstUser && profile.role !== 'ADMIN') {
-        // Update existing profile to admin if first user
-        await supabase
-          .from('profiles')
-          .update({ role: 'ADMIN' })
-          .eq('id', authData.user.id);
-        
+        await supabase.from('profiles').update({ role: 'ADMIN' }).eq('id', authData.user.id);
         profile = { ...profile, role: 'ADMIN' };
       }
       
-      setUser(profile);
+      if (profile) setUserPersistent(profile);
     }
   };
 
   const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err: any) {
-      // Ignore storage errors during logout
-      console.warn('Logout error (ignored):', err?.message);
-    }
+    console.log('[Auth] Explicit logout initiated');
+    
+    // Mark as explicitly logged out FIRST
+    explicitLogoutRef.current = true;
+    
+    // Clear all state
     setUser(null);
     setSupabaseUser(null);
     setSession(null);
+    
+    // Clear storage and set logout flag
+    try {
+      localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.setItem(LOGGED_OUT_KEY, 'true');
+      localStorage.removeItem('sb-kowuwhlwetplermbdvbh-auth-token');
+      sessionStorage.removeItem('sb-kowuwhlwetplermbdvbh-auth-token');
+      console.log('[Auth] All storage cleared');
+    } catch {
+      // Silent fail
+    }
+    
+    // Call Supabase signOut
+    supabase.auth.signOut().catch(() => {});
   };
 
   const updateProfile = async (data: { name?: string; phone?: string; avatar?: string }) => {
@@ -291,22 +391,18 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     
     if (error) throw new Error(error.message);
     
-    setUser(prev => prev ? { ...prev, ...updated } : null);
+    setUserPersistent(prev => prev ? { ...prev, ...updated } : null);
   };
 
   const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
-    
     if (error) throw new Error(error.message);
   };
 
   const updatePassword = async (newPassword: string) => {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-    
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) throw new Error(error.message);
   };
 
@@ -340,5 +436,4 @@ export const useSupabaseAuth = () => {
   return context;
 };
 
-// Re-export as useAuth for compatibility
 export const useAuth = useSupabaseAuth;
