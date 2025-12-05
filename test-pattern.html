@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pattern Test</title>
+    <style>
+        body { margin: 20px; font-family: Arial; }
+        .container { display: flex; gap: 20px; flex-wrap: wrap; }
+        .pattern-box { border: 2px solid #ccc; padding: 10px; }
+        h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>Henna Pattern Test - No Tiling</h1>
+    <p>These patterns should appear once, centered, not repeating</p>
+    
+    <div class="container">
+        <div class="pattern-box">
+            <h3>Arabic Pattern (400x600)</h3>
+            <div id="arabic"></div>
+        </div>
+        
+        <div class="pattern-box">
+            <h3>Floral Pattern (400x600)</h3>
+            <div id="floral"></div>
+        </div>
+        
+        <div class="pattern-box">
+            <h3>Mandala Pattern (400x600)</h3>
+            <div id="mandala"></div>
+        </div>
+        
+        <div class="pattern-box">
+            <h3>Geometric Pattern (400x600)</h3>
+            <div id="geometric"></div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { generateHennaPattern } from './src/lib/handDetection.ts';
+        
+        const width = 400;
+        const height = 600;
+        
+        document.getElementById('arabic').innerHTML = generateHennaPattern(width, height, 'arabic');
+        document.getElementById('floral').innerHTML = generateHennaPattern(width, height, 'floral');
+        document.getElementById('mandala').innerHTML = generateHennaPattern(width, height, 'mandala');
+        document.getElementById('geometric').innerHTML = generateHennaPattern(width, height, 'geometric');
+    </script>
+</body>
+</html>

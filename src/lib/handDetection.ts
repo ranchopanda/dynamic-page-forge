@@ -396,7 +396,8 @@ export async function applyHennaDesign(
     // Generate henna pattern
     console.log('🎨 Generating pattern...');
     const pattern = generateHennaPattern(img.width, img.height, styleName);
-    console.log('✅ Pattern generated');
+    console.log('✅ Pattern generated, SVG length:', pattern.length);
+    console.log('📄 SVG Preview (first 500 chars):', pattern.substring(0, 500));
     
     // Overlay pattern on original image
     console.log('🖼️ Overlaying pattern...');

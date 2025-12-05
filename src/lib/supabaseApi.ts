@@ -1,18 +1,5 @@
-import { error } from 'console';
-import { error } from 'console';
-import { data } from 'react-router-dom';
-import { data } from 'react-router-dom';
-import { data } from 'react-router-dom';
-import { data } from 'react-router-dom';
-import { data } from 'react-router-dom';
-import { data } from 'react-router-dom';
-import { data } from 'react-router-dom';
-import { data } from 'react-router-dom';
-import { data } from 'react-router-dom';
-import { data } from 'react-router-dom';
-import { data } from 'react-router-dom';
 import { supabase, Profile, HennaStyle, Design, Booking, BlogPost, SiteSettings, ArtistProfile, Review } from './supabase';
-import type { User, Session } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 
 class SupabaseApiClient {
   // Auth
@@ -146,6 +133,7 @@ class SupabaseApiClient {
     outfitContext?: string;
     handAnalysis?: any;
     isPublic?: boolean;
+    reviewStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
   }): Promise<Design> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
@@ -159,7 +147,8 @@ class SupabaseApiClient {
         generated_image_url: data.generatedImageUrl,
         outfit_context: data.outfitContext,
         hand_analysis: data.handAnalysis,
-        is_public: data.isPublic || false
+        is_public: data.isPublic || false,
+        review_status: data.reviewStatus || 'PENDING'
       })
       .select()
       .single();

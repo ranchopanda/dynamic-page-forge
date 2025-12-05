@@ -4,7 +4,6 @@ import { useAuth } from '../context/SupabaseAuthContext';
 import { supabaseApi } from '../lib/supabaseApi';
 import { safeStorage } from '../lib/storage';
 import { analyzeHandImage, generateHennaDesign, generateHennaDesignPro, analyzeOutfitImage, generateStyleThumbnail } from '../services/geminiService';
-import { applyHennaDesign } from '../lib/handDetection';
 import SEOHead, { SEO_CONFIGS } from './SEOHead';
 
 interface DesignFlowProps {
@@ -229,6 +228,13 @@ const FALLBACK_STYLES: HennaStyle[] = [
     if (!styleToUse || !selectedFile) return;
     if (styleOverride) setSelectedStyle(styleOverride);
     
+    // Check if overlay mode is selected (locked feature)
+    if (generationMode === 'overlay') {
+      alert('Overlay mode is coming soon! Using AI Standard mode instead.');
+      setGenerationMode('standard');
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -236,15 +242,7 @@ const FALLBACK_STYLES: HennaStyle[] = [
       const base64 = await convertToBase64(selectedFile);
       const outfitContext = outfitType ? `${outfitType} style in ${outfitColors.join(', ')} colors, featuring ${outfitTags.join(', ')} elements` : 'elegant bridal style';
       
-      if (generationMode === 'overlay' && previewUrl) {
-        // Pattern Overlay Mode - preserves exact hand position
-        try {
-          resultImage = await applyHennaDesign(previewUrl, styleToUse.name);
-        } catch (overlayError) {
-          console.warn('Overlay mode failed, falling back to Standard AI:', overlayError);
-          resultImage = await generateHennaDesign(base64, styleToUse.promptModifier, outfitContext);
-        }
-      } else if (generationMode === 'pro') {
+      if (generationMode === 'pro') {
         // Pro AI Mode - premium model with better quality
         resultImage = await generateHennaDesignPro(base64, styleToUse.promptModifier, outfitContext);
       } else {
@@ -293,14 +291,15 @@ const FALLBACK_STYLES: HennaStyle[] = [
           uploadImageToSupabase(generatedImage, `design-${Date.now()}.png`),
         ]);
 
-        // Save design with uploaded image URLs
+        // Save design with uploaded image URLs - make public and auto-approved for gallery
         await supabaseApi.createDesign({
           styleId: selectedStyle.id,
           handImageUrl,
           generatedImageUrl,
           outfitContext,
           handAnalysis: analysis || undefined,
-          isPublic: false,
+          isPublic: true, // Auto-publish to Design Gallery
+          reviewStatus: 'APPROVED', // Auto-approve for immediate visibility
         });
         setIsSaved(true);
       } else {
@@ -658,13 +657,14 @@ const FALLBACK_STYLES: HennaStyle[] = [
           <div className="flex justify-center mb-4">
             <div className="inline-flex rounded-full bg-white shadow-sm border border-[#F3E0D5] p-1 flex-wrap gap-1">
               <button 
-                onClick={() => setGenerationMode('overlay')} 
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${generationMode === 'overlay' ? 'bg-primary text-white' : 'text-[#2B1810]/60 hover:text-primary'}`}
-                title="Pattern overlaid on your exact hand (instant, free)"
+                disabled
+                className="px-4 py-2 rounded-full text-sm font-medium transition-all text-[#2B1810]/30 cursor-not-allowed relative"
+                title="Coming Soon - Pattern overlaid on your exact hand"
               >
                 <span className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm">layers</span>
                   Overlay
+                  <span className="ml-1 px-1.5 py-0.5 bg-gray-200 text-[10px] rounded-full">Soon</span>
                 </span>
               </button>
               <button 
@@ -693,14 +693,6 @@ const FALLBACK_STYLES: HennaStyle[] = [
 
           {/* Mode Description */}
           <div className="text-center mb-6">
-            {generationMode === 'overlay' && (
-              <div className="flex flex-col items-center gap-2">
-                <p className="text-sm text-[#2B1810]/60 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-xs text-green-600">check_circle</span>
-                  Pattern overlaid on your exact hand • Instant • Free
-                </p>
-              </div>
-            )}
             {generationMode === 'standard' && (
               <div className="flex flex-col items-center gap-2">
                 <p className="text-sm text-[#2B1810]/60 flex items-center gap-1">
