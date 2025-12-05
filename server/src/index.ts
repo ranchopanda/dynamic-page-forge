@@ -28,41 +28,18 @@ const app = express();
 // Trust proxy for Vercel/production (needed for secure cookies and HTTPS detection)
 app.set('trust proxy', 1);
 
-// CORS configuration - MUST come before HTTPS redirect to handle preflight requests
+// CORS configuration - Allow all origins for Vercel deployment
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = config.nodeEnv === 'development'
-      ? ['http://localhost:3000', 'http://localhost:3001']
-      : [
-          config.frontendUrl,
-          'https://henna-harmony-him1.vercel.app',
-          // Allow all Vercel preview deployments
-          /https:\/\/henna-harmony-him1-.*\.vercel\.app$/
-        ];
-    
-    // Check if origin is allowed
-    const isAllowed = allowedOrigins.some(allowed => {
-      if (typeof allowed === 'string') {
-        return origin === allowed;
-      }
-      // RegExp check
-      return allowed.test(origin);
-    });
-    
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      console.warn(`CORS blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // Allow all origins (Vercel handles this via vercel.json)
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // 24 hours
 }));
+
+// Handle preflight requests explicitly
+app.options('*', cors());
 
 // HTTPS enforcement in production (after CORS to allow preflight)
 app.use((req, res, next) => {
