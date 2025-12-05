@@ -132,10 +132,12 @@ app.use('/api/ai', aiRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-// Start server
-app.listen(config.port, () => {
-  console.log(`🚀 Server running on http://localhost:${config.port}`);
-  console.log(`📝 Environment: ${config.nodeEnv}`);
-});
+// Start server (only in non-serverless environment)
+if (process.env.VERCEL !== '1') {
+  app.listen(config.port, () => {
+    console.log(`🚀 Server running on http://localhost:${config.port}`);
+    console.log(`📝 Environment: ${config.nodeEnv}`);
+  });
+}
 
 export default app;
