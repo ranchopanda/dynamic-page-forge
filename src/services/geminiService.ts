@@ -92,7 +92,7 @@ export const generateHennaDesign = async (
 
   try {
     const image = base64Image.replace(/^data:image\/\w+;base64,/, '');
-    const result = await callEdgeFunction("generate", { image, stylePrompt, outfitContext });
+    const result = await callEdgeFunction("generate", { image, stylePrompt, outfitContext, isPro: false });
     return result.image;
   } catch (error: any) {
     console.error("Design generation failed:", error.message);
@@ -121,5 +121,17 @@ export const generateHennaDesignPro = async (
     throw new Error(`Pro generation limit reached (5 per day). Please wait ${waitHours} hours.`);
   }
 
-  return generateHennaDesign(base64Image, stylePrompt, outfitContext);
+  try {
+    const image = base64Image.replace(/^data:image\/\w+;base64,/, '');
+    const result = await callEdgeFunction("generate", { image, stylePrompt, outfitContext, isPro: true });
+    return result.image;
+  } catch (error: any) {
+    console.error("Pro design generation failed:", error.message);
+    
+    if (error.message.includes('429') || error.message.includes('quota')) {
+      throw new Error("AI service is temporarily busy. Please wait 30 seconds and try again.");
+    }
+    
+    throw new Error("Unable to generate design. Please try again or browse our gallery for inspiration.");
+  }
 };

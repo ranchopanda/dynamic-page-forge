@@ -18,12 +18,12 @@ serve(async (req) => {
       throw new Error("GEMINI_API_KEY not configured");
     }
 
-    const { image, stylePrompt, outfitContext, action } = await req.json();
+    const { image, stylePrompt, outfitContext, action, isPro } = await req.json();
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
     if (action === "analyze-hand") {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       const prompt = `Analyze this hand image for henna/mehendi design recommendations. Return a JSON object with:
       - skinTone: description of skin tone
       - handShape: description of hand shape
@@ -48,7 +48,7 @@ serve(async (req) => {
     }
 
     if (action === "analyze-outfit") {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       const prompt = `Analyze this outfit image for henna design coordination. Return a JSON object with:
       - outfitType: type of outfit
       - dominantColors: array of hex color codes
@@ -69,7 +69,9 @@ serve(async (req) => {
     }
 
     if (action === "generate") {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp-image-generation" });
+      // Use pro model for pro users, standard for free users
+      const modelName = isPro ? "gemini-3-pro-image-preview" : "gemini-2.5-flash-image";
+      const model = genAI.getGenerativeModel({ model: modelName });
       
       let finalPrompt = `Generate a photorealistic image of a hand with beautiful ${stylePrompt} henna (mehendi) design.
       The hand should look natural with the henna design applied.
@@ -108,6 +110,7 @@ serve(async (req) => {
 
     throw new Error("Invalid action");
   } catch (error: any) {
+    console.error("Edge Function error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

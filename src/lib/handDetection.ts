@@ -100,23 +100,31 @@ export function generateHennaPattern(
 }
 
 function generateArabicPattern(width: number, height: number): string {
+  // Scale factor for responsive design
+  const scale = Math.min(width, height) / 400;
+  const sw = 3 * scale; // stroke width
+  
   return `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="arabicPattern" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
-          <!-- Flowing vines -->
-          <path d="M 20 60 Q 40 40 60 60 Q 80 80 100 60" fill="none" stroke="#6B3410" stroke-width="3" stroke-linecap="round"/>
-          <path d="M 60 20 Q 40 40 60 60 Q 80 80 60 100" fill="none" stroke="#6B3410" stroke-width="3" stroke-linecap="round"/>
-          <!-- Leaves -->
-          <ellipse cx="40" cy="50" rx="8" ry="15" fill="none" stroke="#6B3410" stroke-width="2"/>
-          <ellipse cx="80" cy="70" rx="8" ry="15" fill="none" stroke="#6B3410" stroke-width="2"/>
-          <!-- Dots -->
-          <circle cx="60" cy="60" r="4" fill="#6B3410"/>
-          <circle cx="30" cy="70" r="3" fill="#6B3410"/>
-          <circle cx="90" cy="50" r="3" fill="#6B3410"/>
-        </pattern>
-      </defs>
-      <rect width="${width}" height="${height}" fill="url(#arabicPattern)"/>
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
+      <!-- Main flowing vine from wrist to fingers -->
+      <path d="M ${width/2} ${height*0.9} Q ${width*0.3} ${height*0.7} ${width*0.4} ${height*0.5} Q ${width*0.5} ${height*0.3} ${width*0.3} ${height*0.1}" 
+            fill="none" stroke="#6B3410" stroke-width="${sw}" stroke-linecap="round"/>
+      <path d="M ${width/2} ${height*0.9} Q ${width*0.7} ${height*0.7} ${width*0.6} ${height*0.5} Q ${width*0.5} ${height*0.3} ${width*0.7} ${height*0.1}" 
+            fill="none" stroke="#6B3410" stroke-width="${sw}" stroke-linecap="round"/>
+      
+      <!-- Decorative leaves along vines -->
+      <ellipse cx="${width*0.35}" cy="${height*0.6}" rx="${8*scale}" ry="${15*scale}" transform="rotate(-30 ${width*0.35} ${height*0.6})" fill="none" stroke="#6B3410" stroke-width="${sw*0.7}"/>
+      <ellipse cx="${width*0.65}" cy="${height*0.6}" rx="${8*scale}" ry="${15*scale}" transform="rotate(30 ${width*0.65} ${height*0.6})" fill="none" stroke="#6B3410" stroke-width="${sw*0.7}"/>
+      <ellipse cx="${width*0.45}" cy="${height*0.4}" rx="${8*scale}" ry="${15*scale}" transform="rotate(-45 ${width*0.45} ${height*0.4})" fill="none" stroke="#6B3410" stroke-width="${sw*0.7}"/>
+      <ellipse cx="${width*0.55}" cy="${height*0.4}" rx="${8*scale}" ry="${15*scale}" transform="rotate(45 ${width*0.55} ${height*0.4})" fill="none" stroke="#6B3410" stroke-width="${sw*0.7}"/>
+      
+      <!-- Decorative dots -->
+      <circle cx="${width*0.5}" cy="${height*0.8}" r="${4*scale}" fill="#6B3410"/>
+      <circle cx="${width*0.4}" cy="${height*0.7}" r="${3*scale}" fill="#6B3410"/>
+      <circle cx="${width*0.6}" cy="${height*0.7}" r="${3*scale}" fill="#6B3410"/>
+      <circle cx="${width*0.35}" cy="${height*0.5}" r="${3*scale}" fill="#6B3410"/>
+      <circle cx="${width*0.65}" cy="${height*0.5}" r="${3*scale}" fill="#6B3410"/>
+      <circle cx="${width*0.5}" cy="${height*0.3}" r="${3*scale}" fill="#6B3410"/>
     </svg>
   `;
 }
@@ -154,51 +162,105 @@ function generateMandalaPattern(width: number, height: number): string {
 }
 
 function generateFloralPattern(width: number, height: number): string {
+  const scale = Math.min(width, height) / 400;
+  const sw = 2.5 * scale;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radius = Math.min(width, height) * 0.15;
+  
   return `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="floralPattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-          <!-- Flower center -->
-          <circle cx="50" cy="50" r="8" fill="#6B3410"/>
-          <!-- Petals -->
-          ${Array.from({ length: 6 }, (_, i) => {
-            const angle = (i * 60 * Math.PI) / 180;
-            const x = 50 + Math.cos(angle) * 20;
-            const y = 50 + Math.sin(angle) * 20;
-            return `<ellipse cx="${x}" cy="${y}" rx="8" ry="15" transform="rotate(${i * 60} ${x} ${y})" fill="none" stroke="#6B3410" stroke-width="2"/>`;
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
+      <!-- Central flower -->
+      <circle cx="${centerX}" cy="${centerY}" r="${10*scale}" fill="#6B3410"/>
+      ${Array.from({ length: 8 }, (_, i) => {
+        const angle = (i * 45 * Math.PI) / 180;
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+        return `<ellipse cx="${x}" cy="${y}" rx="${10*scale}" ry="${20*scale}" transform="rotate(${i * 45} ${x} ${y})" fill="none" stroke="#6B3410" stroke-width="${sw}"/>`;
+      }).join('')}
+      
+      <!-- Surrounding flowers -->
+      ${Array.from({ length: 4 }, (_, i) => {
+        const angle = (i * 90 * Math.PI) / 180;
+        const x = centerX + Math.cos(angle) * radius * 2.5;
+        const y = centerY + Math.sin(angle) * radius * 2.5;
+        return `
+          <circle cx="${x}" cy="${y}" r="${6*scale}" fill="#6B3410"/>
+          ${Array.from({ length: 6 }, (_, j) => {
+            const petalAngle = (j * 60 * Math.PI) / 180;
+            const px = x + Math.cos(petalAngle) * radius * 0.5;
+            const py = y + Math.sin(petalAngle) * radius * 0.5;
+            return `<ellipse cx="${px}" cy="${py}" rx="${6*scale}" ry="${12*scale}" transform="rotate(${j * 60} ${px} ${py})" fill="none" stroke="#6B3410" stroke-width="${sw*0.8}"/>`;
           }).join('')}
-          <!-- Leaves -->
-          <path d="M 30 70 Q 35 80 40 70" fill="none" stroke="#6B3410" stroke-width="2"/>
-          <path d="M 70 30 Q 75 20 80 30" fill="none" stroke="#6B3410" stroke-width="2"/>
-          <!-- Dots -->
-          <circle cx="20" cy="20" r="2" fill="#6B3410"/>
-          <circle cx="80" cy="80" r="2" fill="#6B3410"/>
-        </pattern>
-      </defs>
-      <rect width="${width}" height="${height}" fill="url(#floralPattern)"/>
+        `;
+      }).join('')}
+      
+      <!-- Decorative vines connecting flowers -->
+      <path d="M ${centerX} ${centerY-radius*2.5} Q ${centerX+radius} ${centerY-radius*1.5} ${centerX+radius*2.5} ${centerY}" 
+            fill="none" stroke="#6B3410" stroke-width="${sw*0.6}" stroke-linecap="round"/>
+      <path d="M ${centerX+radius*2.5} ${centerY} Q ${centerX+radius*1.5} ${centerY+radius} ${centerX} ${centerY+radius*2.5}" 
+            fill="none" stroke="#6B3410" stroke-width="${sw*0.6}" stroke-linecap="round"/>
+      
+      <!-- Decorative dots -->
+      ${Array.from({ length: 12 }, (_, i) => {
+        const angle = (i * 30 * Math.PI) / 180;
+        const x = centerX + Math.cos(angle) * radius * 1.8;
+        const y = centerY + Math.sin(angle) * radius * 1.8;
+        return `<circle cx="${x}" cy="${y}" r="${2.5*scale}" fill="#6B3410"/>`;
+      }).join('')}
     </svg>
   `;
 }
 
 function generateGeometricPattern(width: number, height: number): string {
+  const scale = Math.min(width, height) / 400;
+  const sw = 2.5 * scale;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const size = Math.min(width, height) * 0.35;
+  
   return `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="geometricPattern" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
-          <!-- Diamond -->
-          <path d="M 40 10 L 70 40 L 40 70 L 10 40 Z" fill="none" stroke="#6B3410" stroke-width="2.5"/>
-          <!-- Inner square -->
-          <rect x="25" y="25" width="30" height="30" fill="none" stroke="#6B3410" stroke-width="2"/>
-          <!-- Center circle -->
-          <circle cx="40" cy="40" r="10" fill="none" stroke="#6B3410" stroke-width="2"/>
-          <!-- Corner dots -->
-          <circle cx="40" cy="10" r="3" fill="#6B3410"/>
-          <circle cx="70" cy="40" r="3" fill="#6B3410"/>
-          <circle cx="40" cy="70" r="3" fill="#6B3410"/>
-          <circle cx="10" cy="40" r="3" fill="#6B3410"/>
-        </pattern>
-      </defs>
-      <rect width="${width}" height="${height}" fill="url(#geometricPattern)"/>
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
+      <!-- Outer diamond -->
+      <path d="M ${centerX} ${centerY-size} L ${centerX+size} ${centerY} L ${centerX} ${centerY+size} L ${centerX-size} ${centerY} Z" 
+            fill="none" stroke="#6B3410" stroke-width="${sw}"/>
+      
+      <!-- Inner diamond -->
+      <path d="M ${centerX} ${centerY-size*0.7} L ${centerX+size*0.7} ${centerY} L ${centerX} ${centerY+size*0.7} L ${centerX-size*0.7} ${centerY} Z" 
+            fill="none" stroke="#6B3410" stroke-width="${sw*0.8}"/>
+      
+      <!-- Square -->
+      <rect x="${centerX-size*0.4}" y="${centerY-size*0.4}" width="${size*0.8}" height="${size*0.8}" 
+            fill="none" stroke="#6B3410" stroke-width="${sw*0.7}"/>
+      
+      <!-- Center circle -->
+      <circle cx="${centerX}" cy="${centerY}" r="${size*0.2}" fill="none" stroke="#6B3410" stroke-width="${sw*0.7}"/>
+      <circle cx="${centerX}" cy="${centerY}" r="${size*0.1}" fill="#6B3410"/>
+      
+      <!-- Corner decorations -->
+      ${Array.from({ length: 4 }, (_, i) => {
+        const angle = (i * 90 * Math.PI) / 180;
+        const x = centerX + Math.cos(angle) * size;
+        const y = centerY + Math.sin(angle) * size;
+        return `
+          <circle cx="${x}" cy="${y}" r="${4*scale}" fill="#6B3410"/>
+          <circle cx="${x}" cy="${y}" r="${8*scale}" fill="none" stroke="#6B3410" stroke-width="${sw*0.5}"/>
+        `;
+      }).join('')}
+      
+      <!-- Diagonal corner elements -->
+      ${Array.from({ length: 4 }, (_, i) => {
+        const angle = (i * 90 + 45) * Math.PI / 180;
+        const x = centerX + Math.cos(angle) * size * 0.7;
+        const y = centerY + Math.sin(angle) * size * 0.7;
+        return `<circle cx="${x}" cy="${y}" r="${3*scale}" fill="#6B3410"/>`;
+      }).join('')}
+      
+      <!-- Connecting lines -->
+      <line x1="${centerX-size*0.4}" y1="${centerY-size*0.4}" x2="${centerX-size*0.7}" y2="${centerY}" stroke="#6B3410" stroke-width="${sw*0.5}"/>
+      <line x1="${centerX+size*0.4}" y1="${centerY-size*0.4}" x2="${centerX+size*0.7}" y2="${centerY}" stroke="#6B3410" stroke-width="${sw*0.5}"/>
+      <line x1="${centerX+size*0.4}" y1="${centerY+size*0.4}" x2="${centerX+size*0.7}" y2="${centerY}" stroke="#6B3410" stroke-width="${sw*0.5}"/>
+      <line x1="${centerX-size*0.4}" y1="${centerY+size*0.4}" x2="${centerX-size*0.7}" y2="${centerY}" stroke="#6B3410" stroke-width="${sw*0.5}"/>
     </svg>
   `;
 }
@@ -221,24 +283,31 @@ export async function overlayHennaPattern(
   // Draw original image
   ctx.drawImage(originalImage, 0, 0);
   
-  // Create pattern image from SVG
+  // Create a temporary canvas for the pattern
+  const patternCanvas = document.createElement('canvas');
+  patternCanvas.width = originalImage.width;
+  patternCanvas.height = originalImage.height;
+  
+  // Convert SVG to image and draw on pattern canvas
   const patternImg = await svgToImage(pattern);
+  const patternCtx = patternCanvas.getContext('2d');
+  
+  if (!patternCtx) throw new Error('Could not get pattern canvas context');
+  
+  // Draw pattern image at exact canvas size (no scaling, no repeating)
+  patternCtx.drawImage(patternImg, 0, 0, patternCanvas.width, patternCanvas.height);
   
   // Apply pattern with blending
   ctx.globalCompositeOperation = 'multiply';
-  ctx.globalAlpha = 0.6; // Slightly more transparent for better blending
+  ctx.globalAlpha = 0.7;
   
   if (handBounds.boundingBox) {
     // Apply to detected hand area
     const { x, y, width, height } = handBounds.boundingBox;
-    ctx.drawImage(patternImg, x, y, width, height);
+    ctx.drawImage(patternCanvas, x, y, width, height, x, y, width, height);
   } else {
-    // Apply to entire image (centered)
-    const patternWidth = canvas.width * 0.8;
-    const patternHeight = canvas.height * 0.8;
-    const x = (canvas.width - patternWidth) / 2;
-    const y = (canvas.height - patternHeight) / 2;
-    ctx.drawImage(patternImg, x, y, patternWidth, patternHeight);
+    // Apply to entire image
+    ctx.drawImage(patternCanvas, 0, 0);
   }
   
   // Reset composite operation
@@ -254,14 +323,21 @@ export async function overlayHennaPattern(
 function svgToImage(svgString: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const blob = new Blob([svgString], { type: 'image/svg+xml' });
+    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     
+    console.log('🖼️ Converting SVG to image, blob size:', blob.size);
+    
     img.onload = () => {
+      console.log('✅ SVG converted to image:', img.width, 'x', img.height);
       URL.revokeObjectURL(url);
       resolve(img);
     };
-    img.onerror = reject;
+    img.onerror = (err) => {
+      console.error('❌ SVG to image conversion failed:', err);
+      URL.revokeObjectURL(url);
+      reject(err);
+    };
     img.src = url;
   });
 }
