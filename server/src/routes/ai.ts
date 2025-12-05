@@ -304,7 +304,7 @@ Generate a photorealistic image where:
     });
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
+      if (part.inlineData?.data) {
         // Add watermark to generated image
         const watermarkedImage = await addWatermark(part.inlineData.data);
         res.json({ image: `data:image/png;base64,${watermarkedImage}` });
@@ -396,13 +396,15 @@ CRITICAL: This is a PREMIUM generation. The hand must be ABSOLUTELY IDENTICAL to
         }
         
         // Add watermark to generated image
-        const watermarkedImage = await addWatermark(part.inlineData.data);
-        
-        res.json({ 
-          image: `data:image/png;base64,${watermarkedImage}`,
-          model: 'pro',
-          message: 'Generated with Premium AI model'
-        });
+        if (part.inlineData?.data) {
+          const watermarkedImage = await addWatermark(part.inlineData.data);
+          
+          res.json({ 
+            image: `data:image/png;base64,${watermarkedImage}`,
+            model: 'pro',
+            message: 'Generated with Premium AI model'
+          });
+        }
         return;
       }
     }
