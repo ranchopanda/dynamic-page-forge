@@ -1,14 +1,17 @@
 import { HandAnalysis, OutfitAnalysis } from "../types";
 import { rateLimiter, RATE_LIMITS } from "../lib/rateLimiter";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { supabase } from "../lib/supabase";
 
-// Initialize Gemini AI directly in frontend
-// Note: For production, consider using Supabase Edge Functions to protect the key
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyB5MOEMkgmJatNs8voMxzDm0blv3pBCMsw';
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+// Call Supabase Edge Function (API key is secure on server)
+const callEdgeFunction = async (action: string, data: any) => {
+  const { data: result, error } = await supabase.functions.invoke("generate-design", {
+    body: { action, ...data },
+  });
 
-const TEXT_MODEL = 'gemini-2.0-flash';
-const IMAGE_MODEL = 'gemini-2.0-flash-exp-image-generation';
+  if (error) throw new Error(error.message);
+  if (result?.error) throw new Error(result.error);
+  return result;
+};
 
 export const analyzeHandImage = async (base64Image: string): Promise<HandAnalysis> => {
   const cooldownCheck = rateLimiter.checkCooldown('ai-hand-analysis', RATE_LIMITS.AI_ANALYSIS.cooldown);
@@ -32,30 +35,9 @@ export const analyzeHandImage = async (base64Image: string): Promise<HandAnalysi
   };
 
   try {
-    const model = genAI.getGenerativeModel({ model: TEXT_MODEL });
-    
-    const prompt = `Analyze this hand image for henna/mehendi design recommendations. Return a JSON object with:
-    - skinTone: description of skin tone
-    - handShape: description of hand shape
-    - coverage: recommended coverage area
-    - keyFeature: notable feature of the hand
-    - fingerShape: description of finger shape
-    - wristArea: wrist area description
-    - recommendedStyles: array of 2-3 recommended henna styles
-    
-    Return ONLY valid JSON, no markdown.`;
-
-    const result = await model.generateContent([
-      { text: prompt },
-      { inlineData: { mimeType: 'image/jpeg', data: base64Image.replace(/^data:image\/\w+;base64,/, '') } }
-    ]);
-
-    const text = result.response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    return fallbackAnalysis;
+    const image = base64Image.replace(/^data:image\/\w+;base64,/, '');
+    const result = await callEdgeFunction("analyze-hand", { image });
+    return result || fallbackAnalysis;
   } catch (error: any) {
     console.error("Hand analysis failed:", error.message);
     return fallbackAnalysis;
@@ -80,26 +62,9 @@ export const analyzeOutfitImage = async (base64Image: string): Promise<OutfitAna
   };
 
   try {
-    const model = genAI.getGenerativeModel({ model: TEXT_MODEL });
-    
-    const prompt = `Analyze this outfit image for henna design coordination. Return a JSON object with:
-    - outfitType: type of outfit (e.g., "Bridal Lehenga", "Saree", "Western Dress")
-    - dominantColors: array of hex color codes
-    - styleKeywords: array of style keywords
-    
-    Return ONLY valid JSON, no markdown.`;
-
-    const result = await model.generateContent([
-      { text: prompt },
-      { inlineData: { mimeType: 'image/jpeg', data: base64Image.replace(/^data:image\/\w+;base64,/, '') } }
-    ]);
-
-    const text = result.response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    return fallbackAnalysis;
+    const image = base64Image.replace(/^data:image\/\w+;base64,/, '');
+    const result = await callEdgeFunction("analyze-outfit", { image });
+    return result || fallbackAnalysis;
   } catch (error: any) {
     console.error("Outfit analysis failed:", error.message);
     return fallbackAnalysis;
@@ -126,38 +91,9 @@ export const generateHennaDesign = async (
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: IMAGE_MODEL });
-    
-    let finalPrompt = `Generate a photorealistic image of a hand with beautiful ${stylePrompt} henna (mehendi) design.
-    The hand should look natural with the henna design applied.
-    The henna should have a rich, natural reddish-brown color.
-    Include traditional motifs: paisleys, flowers, mandalas, vines.`;
-    
-    if (outfitContext) {
-      finalPrompt += `\nThe design should complement this outfit: ${outfitContext}`;
-    }
-
-    const result = await model.generateContent({
-      contents: [{
-        role: 'user',
-        parts: [
-          { inlineData: { mimeType: 'image/jpeg', data: base64Image.replace(/^data:image\/\w+;base64,/, '') } },
-          { text: finalPrompt }
-        ]
-      }],
-      generationConfig: {
-        responseModalities: ['image', 'text'] as any,
-      }
-    } as any);
-
-    const response = result.response;
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if ((part as any).inlineData) {
-        return `data:image/png;base64,${(part as any).inlineData.data}`;
-      }
-    }
-    
-    throw new Error('No image generated');
+    const image = base64Image.replace(/^data:image\/\w+;base64,/, '');
+    const result = await callEdgeFunction("generate", { image, stylePrompt, outfitContext });
+    return result.image;
   } catch (error: any) {
     console.error("Design generation failed:", error.message);
     
@@ -185,6 +121,5 @@ export const generateHennaDesignPro = async (
     throw new Error(`Pro generation limit reached (5 per day). Please wait ${waitHours} hours.`);
   }
 
-  // Pro uses the same model but with enhanced prompts
   return generateHennaDesign(base64Image, stylePrompt, outfitContext);
 };
